@@ -58,7 +58,7 @@ FRPS=frps
 
 * unins_frps_s : delete frp binary and configuration files and server service
 
-# install 
+# Install frp
 * install frp client
 
 `
@@ -71,7 +71,7 @@ FRPS=frps
 ./frpinstall.sh ins_frps_s
 `
 
-# uninstall
+# Uninstall frp
 
 * uninstall frp client
 
