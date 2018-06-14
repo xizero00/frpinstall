@@ -181,7 +181,8 @@ install_frp() {
         echo "create frp configuration directory"
         sudo mkdir /etc/frp
     fi
-
+    install_frpc_config
+    install_frps_config
 }
 
 uninstall_frp() {
@@ -283,10 +284,10 @@ case "$1" in
     echo "Usage: $0 {ins_frp|ins_c_serv|ins_s_serv|unins_c_serv|unins_s_serv}"
     echo "      support installing frp service for systemd(tested) and initd(not tested)"
     echo "      ins_frp : install frp binary and configuration files"
-    echo "      ins_c_serv : install frp binary and configuration files and client service"
-    echo "      ins_s_serv : install frp binary and configuration files and server service"
-    echo "      unins_c_serv : delete frp binary and configuration files and client service"
-    echo "      unins_s_serv : delete frp binary and configuration files and server service"
+    echo "      ins_frpc_s : install frp binary and configuration files and client service"
+    echo "      ins_frps_s : install frp binary and configuration files and server service"
+    echo "      unins_frpc_s : delete frp binary and configuration files and client service"
+    echo "      unins_frps_s : delete frp binary and configuration files and server service"
 esac
 
 
