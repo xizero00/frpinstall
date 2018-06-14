@@ -81,9 +81,41 @@ FRPS=frps
 
 * uninstall frp server
 
+
 `
 ./frpinstall.sh unins_frps_s
 `
 
+# Manage your frp service
+* systemd system
+
+ frp client
+ 
+`
+sudo systemctl start/stop/restart frpc
+`
+
+ frp server
+ 
+`
+sudo systemctl start/stop/restart frps
+`
+
+* initd system
+
+ frp client
+ 
+`
+/etc/init.d/frpc start/stop/restart
+`
+
+ frp server
+ 
+`
+/etc/init.d/frps start/stop/restart
+`
+
+
+`
 
 
