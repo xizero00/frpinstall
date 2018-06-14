@@ -4,7 +4,7 @@ set -e
 #==========frp related configuration=====
 # please refer to https://github.com/fatedier/frp
 # frp server ip address(公网主机ip地址)
-FRP_SERVER_IP='127.0.0.1'
+FRP_SERVER_IP='65.49.199.146'
 # frp server port (公网主机FRP反向连接端口)
 FRP_SERVER_PORT='7000'
 
@@ -12,7 +12,7 @@ FRP_SERVER_PORT='7000'
 FRP_INET_PORT='6000'
 
 # frp token(FRP 密码，用于反向代理连接保证安全性)
-FRP_TOKEN='x2dsada'
+FRP_TOKEN='dsadsa221!)'
 
 
 #########################################
@@ -61,7 +61,7 @@ install_frps_config() {
     echo "
 [common]
 bind_port = ${FRP_SERVER_PORT}
-token = ${FRP_TOKEN})
+token = ${FRP_TOKEN}
 " | sudo tee /etc/frp/${FRPSCONF}
 }
 
