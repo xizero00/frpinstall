@@ -150,7 +150,9 @@ TARFILENAME="${TARFILENAME%.*}"
 download_frp_64() {
     if [ ! -f $TARFILE ]; then
         echo "download ${TARFILE}"
-        proxychains wget https://github.com/fatedier/frp/releases/download/v0.20.0/${TARFILE}
+        #proxychains wget https://github.com/fatedier/frp/releases/download/v0.20.0/${TARFILE}
+        
+        wget https://github.com/fatedier/frp/releases/download/v0.20.0/${TARFILE}
         echo "extract ${TARFILE}"
         tar -xzvf $TARFILE
     else
