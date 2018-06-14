@@ -92,13 +92,13 @@ FRPS=frps
  frp client
  
 `
-sudo systemctl start/stop/restart frpc
+sudo systemctl start/stop/restart/status frpc
 `
 
  frp server
  
 `
-sudo systemctl start/stop/restart frps
+sudo systemctl start/stop/restart/status frps
 `
 
 * initd system
@@ -106,13 +106,15 @@ sudo systemctl start/stop/restart frps
  frp client
  
 `
-/etc/init.d/frpc start/stop/restart
+service frpc start/stop/restart/status
 `
+
+
 
  frp server
  
 `
-/etc/init.d/frps start/stop/restart
+service frps start/stop/restart/status
 `
 
 
