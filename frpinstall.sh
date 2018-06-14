@@ -4,7 +4,7 @@ set -e
 #==========frp related configuration=====
 # please refer to https://github.com/fatedier/frp
 # frp server ip address(公网主机ip地址)
-FRP_SERVER_IP='127。0.0.1'
+FRP_SERVER_IP='127.0.0.1'
 # frp server port (公网主机FRP反向连接端口)
 FRP_SERVER_PORT='7000'
 
