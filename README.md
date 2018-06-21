@@ -86,6 +86,22 @@ FRPS=frps
 ./frpinstall.sh unins_frps_s
 `
 
+# Configuration Files
+
+* frp client configuration file
+
+```
+/etc/frp/frpc.ini
+```
+
+* frp server configuration file
+
+
+```
+/etc/frp/frps.ini
+```
+
+
 # Manage your frp service
 * systemd system
 
