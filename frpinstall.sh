@@ -11,6 +11,8 @@ FRP_SERVER_PORT='7000'
 # frp server port for ssh(公网主机外网端口号，供ssh使用)
 FRP_INET_PORT='6000'
 
+LOCAL_SSH_PORT='22'
+
 # frp token(FRP 密码，用于反向代理连接保证安全性)
 FRP_TOKEN='123456)'
 # 设定一个用户的名字，依次来区分服务的名字，如果你想设置多个frp的话。
@@ -52,7 +54,7 @@ token = ${FRP_TOKEN}
 [ssh]
 type = tcp
 local_ip = 127.0.0.1
-local_port = 22
+local_port = ${LOCAL_SSH_PORT}
 remote_port = ${FRP_INET_PORT}
 " | sudo tee /etc/frp/${FRPCCONF}
 }
