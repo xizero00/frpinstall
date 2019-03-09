@@ -13,7 +13,8 @@ FRP_INET_PORT='6000'
 
 # frp token(FRP 密码，用于反向代理连接保证安全性)
 FRP_TOKEN='123456)'
-
+# 设定一个用户的名字，依次来区分服务的名字，如果你想设置多个frp的话。
+USER_NAME='user'
 
 #########################################
 #============frp download =============
@@ -24,17 +25,17 @@ TARFILE='frp_0.20.0_linux_amd64.tar.gz'
 
 #===========frp configuration file=======
 # frp client configuration filename
-FRPCCONF=frpc.ini
+FRPCCONF=frpc_${USER_NAME}.ini
 # frp server configuration filename
-FRPSCONF=frps.ini
+FRPSCONF=frps_${USER_NAME}.ini
 
 #=========service configuration =========
 # frp service type(only support systemd or initd)
 SERVICETYPE=systemd
 # frp client service name
-FRPC=frpc
+FRPC=frpc_${USER_NAME}
 # frp server service name
-FRPS=frps
+FRPS=frps_${USER_NAME}
 
 
 
