@@ -46,7 +46,7 @@ install_frpc_config() {
 [common]
 server_addr = ${FRP_SERVER_IP}
 server_port = ${FRP_SERVER_PORT}
-token = ${FRP_TOKEN})
+token = ${FRP_TOKEN}
 
 [ssh]
 type = tcp
