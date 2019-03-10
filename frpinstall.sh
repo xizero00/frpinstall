@@ -11,11 +11,12 @@ FRP_SERVER_PORT='7000'
 # frp server port for ssh(公网主机外网端口号，供ssh使用)
 FRP_INET_PORT='6000'
 
+# the client machine 's ssh port
 LOCAL_SSH_PORT='22'
 
 # frp token(FRP 密码，用于反向代理连接保证安全性)
 FRP_TOKEN='123456)'
-# 设定一个用户的名字，依次来区分服务的名字，如果你想设置多个frp的话。
+# user name which can be used to identify the service
 USER_NAME='user'
 
 #########################################
