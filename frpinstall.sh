@@ -99,10 +99,13 @@ install_frpc_systemd_service() {
      echo "
 [Unit]
 Description=frpc daemon
+After=network.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/frpc -c /etc/frp/${FRPCCONF}
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
