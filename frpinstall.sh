@@ -73,10 +73,13 @@ install_frps_systemd_service() {
      echo "
 [Unit]
 Description=frps daemon
+After=network.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/frps -c /etc/frp/${FRPSCONF}
+Restart=always
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
