@@ -74,12 +74,14 @@ install_frps_systemd_service() {
 [Unit]
 Description=frps daemon
 After=network.target
+After=systemd-user-sessions.service
+After=network-online.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/frps -c /etc/frp/${FRPSCONF}
-Restart=always
-RestartSec=5
+Restart=on-failure
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
@@ -100,11 +102,13 @@ install_frpc_systemd_service() {
 [Unit]
 Description=frpc daemon
 After=network.target
+After=systemd-user-sessions.service
+After=network-online.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/frpc -c /etc/frp/${FRPCCONF}
-Restart=always
+Restart=on-failure
 RestartSec=5
 
 [Install]
