@@ -2,7 +2,7 @@
 set -e
 
 #==========frp related configuration=====
-# please refer to https://github.com/fatedier/frp
+# please refer to https://github.com/fatedier/frp/blob/dev/README.md#example-usage
 # frp server ip address(公网主机ip地址)
 FRP_SERVER_IP='127.0.0.1'
 # frp server port (公网主机FRP反向连接端口)
@@ -15,22 +15,21 @@ FRP_INET_PORT='6000'
 LOCAL_SSH_PORT='22'
 
 # frp token(FRP 密码，用于反向代理连接保证安全性)
-FRP_TOKEN='123456)'
+FRP_TOKEN='123456'
 # user name which can be used to identify the service
-USER_NAME='user'
+USER_NAME=${USER}
 
 #########################################
 #============frp download =============
 # frp version
 # please refer to https://github.com/fatedier/frp/releases
-#TARFILE='frp_0.20.0_linux_386.tar.gz'
-TARFILE='frp_0.20.0_linux_amd64.tar.gz'
+FRPURL='https://mirror.ghproxy.com/https://github.com/fatedier/frp/releases/download/v0.59.0/frp_0.59.0_linux_amd64.tar.gz'
 
 #===========frp configuration file=======
 # frp client configuration filename
-FRPCCONF=frpc_${USER_NAME}.ini
+FRPCCONF=frpc_${USER_NAME}.toml
 # frp server configuration filename
-FRPSCONF=frps_${USER_NAME}.ini
+FRPSCONF=frps_${USER_NAME}.toml
 
 #=========service configuration =========
 # frp service type(only support systemd or initd)
@@ -47,25 +46,33 @@ FRPS=frps_${USER_NAME}
 install_frpc_config() {
     echo 'install frp client configuration file'
     echo "
-[common]
-server_addr = ${FRP_SERVER_IP}
-server_port = ${FRP_SERVER_PORT}
-token = ${FRP_TOKEN}
+serverAddr = \"${FRP_SERVER_IP}\"
+serverPort = ${FRP_SERVER_PORT}
 
-[ssh]
-type = tcp
-local_ip = 127.0.0.1
-local_port = ${LOCAL_SSH_PORT}
-remote_port = ${FRP_INET_PORT}
+auth.method = \"token\"
+auth.token = \"${FRP_TOKEN}\"
+
+[[proxies]]
+name = \"ssh\"
+type = \"tcp\"
+localIP = \"127.0.0.1\"
+localPort = ${LOCAL_SSH_PORT}
+remotePort = ${FRP_INET_PORT}
 " | sudo tee /etc/frp/${FRPCCONF}
 }
 
 install_frps_config() {
-    echo 'install frp server configuration file'
+    echo 'Installing frp server configuration file'
     echo "
-[common]
-bind_port = ${FRP_SERVER_PORT}
-token = ${FRP_TOKEN}
+bindPort = ${FRP_SERVER_PORT}
+
+auth.method = \"token\"
+auth.token = \"${FRP_TOKEN}\"
+
+webServer.addr = \"127.0.0.1\"
+webServer.port = 7500
+webServer.user = \"admin\"
+webServer.password = \"adminxdaas\"
 " | sudo tee /etc/frp/${FRPSCONF}
 }
 
@@ -159,23 +166,23 @@ uninstall_frpc_initd_service() {
     sudo rm -rf /etc/init.d/${FRPC}
 }
 
-TARFILENAME="${TARFILE%.*}"
-TARFILENAME="${TARFILENAME%.*}"
+TARFILENAME=$(basename -- "$FRPURL")
+TARDIR="${TARFILENAME%.tar.gz}"
 download_frp_64() {
-    if [ ! -f $TARFILE ]; then
-        echo "download ${TARFILE}"
-        #proxychains wget https://github.com/fatedier/frp/releases/download/v0.20.0/${TARFILE}
+    if [ ! -f $TARFILENAME ]; then
+        echo "Downloading ${FRPURL}"
+        #proxychains wget ${FRPURL}
         
-        wget https://github.com/fatedier/frp/releases/download/v0.20.0/${TARFILE}
-        echo "extract ${TARFILE}"
-        tar -xzvf $TARFILE
+        wget --no-check-certificate  ${FRPURL}
+        echo "Extracting ${TARFILENAME}"
+        tar -xzvf $TARFILENAME
     else
-        echo "already exists ${TARFILE}"
-        if [ ! -d $TARFILENAME ]; then
-            echo "extract ${TARFILE} to ${TARFILENAME}"
-            tar -xzvf $TARFILE
+        echo "Already exists ${TARFILENAME}"
+        if [ ! -d $TARDIR ]; then
+            echo "Extracting ${TARFILENAME} to ${TARDIR}"
+            tar -xzvf $TARFILENAME
         else
-            echo "already exists ${TARFILENAME}"
+            echo "Already exists ${TARDIR}"
         fi
     fi
 }
@@ -184,17 +191,17 @@ install_frp() {
     download_frp_64
 
     if [ ! -f /usr/bin/frpc ]; then
-        echo "copy ${TARFILENAME}/frpc to /usr/bin/frpc"
-        sudo cp ${TARFILENAME}/frpc /usr/bin/frpc
+        echo "Copying ${TARDIR}/frpc to /usr/bin/frpc"
+        sudo cp ${TARDIR}/frpc /usr/bin/frpc
     fi
 
     if [ ! -f /usr/bin/frps ]; then
-        echo "copy ${TARFILENAME}/frps to /usr/bin/frps"
-        sudo cp ${TARFILENAME}/frps /usr/bin/frps
+        echo "Copying ${TARDIR}/frps to /usr/bin/frps"
+        sudo cp ${TARDIR}/frps /usr/bin/frps
     fi
 
     if [ ! -d /etc/frp ]; then
-        echo "create frp configuration directory"
+        echo "Creating frp configuration directory"
         sudo mkdir /etc/frp
     fi
     install_frpc_config
@@ -203,15 +210,15 @@ install_frp() {
 
 uninstall_frp() {
     if [ -f /usr/bin/frpc ]; then
-        echo 'delete frpc to /usr/bin/frpc'
+        echo 'Deleting frpc to /usr/bin/frpc'
         sudo rm -rf /usr/bin/frpc
     fi
     if [ -f /usr/bin/frps ]; then
-        echo 'delete frps to /usr/bin/frps'
+        echo 'Deleting frps to /usr/bin/frps'
         sudo rm -rf /usr/bin/frps
     fi
     if [ ! -d /etc/frp ]; then
-        echo 'delete frp configuration directory'
+        echo 'Deleting frp configuration directory'
         sudo rm -rf /etc/frp
     fi
 
@@ -219,40 +226,40 @@ uninstall_frp() {
 
 install_frpc_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'install frp client service for systemd'
+        echo 'Installing frp client service for systemd'
         install_frpc_systemd_service
     else
-        echo 'install frp client service for initd'
+        echo 'Installing frp client service for initd'
         install_frpc_initd_service
     fi
 }
 
 uninstall_frpc_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'uninstall frp client service for systemd'
+        echo 'Uninstalling frp client service for systemd'
         uninstall_frpc_systemd_service
     else
-        echo 'uninstall frp client service for initd'
+        echo 'Uninstalling frp client service for initd'
         uninstall_frpc_initd_service
     fi
 }
 
 install_frps_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'install frp server service for systemd'
+        echo 'Installing frp server service for systemd'
         install_frps_systemd_service
     else
-        echo 'install frp server service for initd'
+        echo 'Installing frp server service for initd'
         install_frps_initd_service
     fi
 }
 
 uninstall_frps_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'uninstall frp server service for systemd'
+        echo 'Uninstalling frp server service for systemd'
         uninstall_frps_systemd_service
     else
-        echo 'uninstall frp server service for initd'
+        echo 'Uninstalling frp server service for initd'
         uninstall_frps_initd_service
     fi
 }
@@ -297,7 +304,7 @@ case "$1" in
         uninstall_frps_service
             ;;
     *)
-    echo "Usage: $0 {ins_frp|ins_c_serv|ins_s_serv|unins_c_serv|unins_s_serv}"
+    echo "Usage: $0 {ins_frp|ins_frpc_s|ins_frps_s|unins_frpc_s|unins_frps_s}"
     echo "      support installing frp service for systemd(tested) and initd(not tested)"
     echo "      ins_frp : install frp binary and configuration files"
     echo "      ins_frpc_s : install frp binary and configuration files and client service"
