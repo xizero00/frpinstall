@@ -1,71 +1,60 @@
 # frpinstall
-frp install script
+Frp installation Script
 
-support installing frp service for systemd(tested) and initd(not tested)
+Support installing frp service for systemd(tested) and initd(not tested)
 
-# Download script
+# Download the script
 
 `git clone https://github.com/djangogo/frpinstall.git
 `
 
-# Configure the script
+# Configuration
 modify the script according to your ip and port 
 ```
-#==========frp related configuration=====
-# please refer to https://github.com/fatedier/frp
+# please refer to https://github.com/fatedier/frp/blob/dev/README.md#example-usage
 # frp server ip address(公网主机ip地址)
 FRP_SERVER_IP='127.0.0.1'
 # frp server port (公网主机FRP反向连接端口)
 FRP_SERVER_PORT='7000'
 
-# frp server port for ssh(公网主机外网端口号，供ssh使用)
+# frp server port for ssh(公网主机将内部服务暴露给外网的端口号)
 FRP_INET_PORT='6000'
 
-# frp token(FRP 密码，用于反向代理连接保证安全性)
-FRP_TOKEN='x2dsada'
+# the client machine 's ssh port(实际提供服务的内部机器的端口号)
+LOCAL_SSH_PORT='22'
 
+# frp token(FRP 密码，用于反向代理连接保证安全性)
+FRP_TOKEN='123456'
+# user name which can be used to identify the service
+USER_NAME=${USER}# 这里我们使用用户名作为服务的区分
 
 #########################################
 #============frp download =============
 # frp version
 # please refer to https://github.com/fatedier/frp/releases
-#TARFILE='frp_0.20.0_linux_386.tar.gz'
-TARFILE='frp_0.20.0_linux_amd64.tar.gz'
+FRPURL='https://mirror.ghproxy.com/https://github.com/fatedier/frp/releases/download/v0.59.0/frp_0.59.0_linux_amd64.tar.gz'
 
-#===========frp configuration file=======
-# frp client configuration filename
-FRPCCONF=frpc.ini
-# frp server configuration filename
-FRPSCONF=frps.ini
-
-#=========service configuration =========
-# frp service type(only support systemd or initd)
-SERVICETYPE=systemd
-# frp client service name
-FRPC=frpc
-# frp server service name
-FRPS=frps
 ```
 
 # Options:
 * ins_frp : install frp binary and configuration files
 
-* ins_frpc_s : install frp binary and configuration files and client service
+* ins_frpc_s : install frpc binary and configuration files and its client service
 
-* ins_frps_s : install frp binary and configuration files and server service
+* ins_frps_s : install frpc binary and configuration files and its server service
 
-* unins_frpc_s : delete frp binary and configuration files and client service
+* unins_frpc_s : delete frps binary and configuration files and its client service
 
-* unins_frps_s : delete frp binary and configuration files and server service
+* unins_frps_s : delete frps binary and configuration files and its  server service
 
 # Install frp
-* install frp client
+* install frp client with its service
 
 `
 ./frpinstall.sh ins_frpc_s
 `
 
-* install frp server
+* install frp server with its service
 
 `
 ./frpinstall.sh ins_frps_s
@@ -73,13 +62,13 @@ FRPS=frps
 
 # Uninstall frp
 
-* uninstall frp client
+* uninstall frp client and its service
 
 `
 ./frpinstall.sh unins_frpc_s
 `
 
-* uninstall frp server
+* uninstall frp server and its service
 
 
 `
@@ -91,14 +80,14 @@ FRPS=frps
 * frp client configuration file
 
 ```
-/etc/frp/frpc.ini
+/etc/frp/frpc_${USER}.toml
 ```
 
 * frp server configuration file
 
 
 ```
-/etc/frp/frps.ini
+/etc/frp/frps_${USER}.toml
 ```
 
 
@@ -108,13 +97,13 @@ FRPS=frps
  frp client
  
 `
-sudo systemctl start/stop/restart/status frpc
+sudo systemctl start/stop/restart/status frpc_${USER}
 `
 
  frp server
  
 `
-sudo systemctl start/stop/restart/status frps
+sudo systemctl start/stop/restart/status frps_${USER}
 `
 
 * initd system
