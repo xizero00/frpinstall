@@ -5,7 +5,7 @@ Support installing frp service for systemd(tested) and initd(not tested)
 
 # Download the script
 
-`git clone https://github.com/djangogo/frpinstall.git
+`git clone https://github.com/xizero00/frpinstall.git
 `
 
 # Configuration
