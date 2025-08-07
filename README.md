@@ -2,6 +2,7 @@
 # Frp Installation Script(FRP自动安装脚本)
 
 Support installing frp service for systemd(tested) and initd(not tested)
+
 支持Systemd，Initd没有经过测试
 
 # Download the script(下载本Github仓库的脚本)
