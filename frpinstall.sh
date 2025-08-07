@@ -90,7 +90,7 @@ auth.method = \"token\"
 auth.token = \"${FRP_TOKEN}\"
 
 [[proxies]]
-name = ${SERVICE_NAME}
+name = \"${SERVICE_NAME}\"
 type = \"tcp\"
 localIP = \"127.0.0.1\"
 localPort = ${LOCAL_SERVICE_PORT}
