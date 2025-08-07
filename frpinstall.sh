@@ -1,45 +1,82 @@
 #/usr/bin/env bash
 set -e
 
-#==========frp related configuration=====
-# please refer to https://github.com/fatedier/frp/blob/dev/README.md#example-usage
-# frp server ip address(公网主机ip地址)
-FRP_SERVER_IP='127.0.0.1'
-# frp server port (公网主机FRP反向连接端口)
-FRP_SERVER_PORT='7000'
-
-# frp server port for ssh(公网主机外网端口号，供ssh使用)
-FRP_INET_PORT='6000'
-
-# the client machine 's ssh port
-LOCAL_SSH_PORT='22'
-
-# frp token(FRP 密码，用于反向代理连接保证安全性)
-FRP_TOKEN='123456'
-# user name which can be used to identify the service
-USER_NAME=${USER}
 
 #########################################
-#============frp download =============
-# frp version
+#============FRP download =============
+# FRP version
 # please refer to https://github.com/fatedier/frp/releases
-FRPURL='https://mirror.ghproxy.com/https://github.com/fatedier/frp/releases/download/v0.59.0/frp_0.59.0_linux_amd64.tar.gz'
+# 你可以根据FRP的github的release来修改该URL，使其下载最新的FRP程序
+FRPURL='https://mirror.ghproxy.com/https://github.com/fatedier/frp/releases/download/v0.63.0/frp_0.63.0_linux_amd64.tar.gz'
 
-#===========frp configuration file=======
+
+#########################################
+#==========FRP related configurations =====
+# FRP相关的配置
+# please refer to https://github.com/fatedier/frp/blob/dev/README.md#example-usage
+# 具体语法可以参考 https://github.com/fatedier/frp/blob/dev/README.md#example-usage
+
+# FRP server ip address
+# 公网主机ip地址
+FRP_SERVER_IP='127.0.0.1'
+
+# FRP server port 
+# 公网主机的FRP反向连接端口，也就是你购买的公网服务器所开放的用于FRP服务的连接端口。
+FRP_SERVER_PORT='7000'
+
+# FRP server port for your service
+# 公网主机外网端口号，供你的服务使用
+# 比如你想让内网主机的ssh服务在外网访问的端口是10022，那么就可以
+# 设置为如下
+FRP_INET_PORT='10022'
+
+# Your service's name
+# 你想要进行反向代理的服务程序的名字
+# 比如这里想对ssh进行反向代理，那么就填ssh
+# 服务的名字随便起，只要你自己知道这个服务是干嘛的就行
+# 命名不要在单词之间有空格
+SERVICE_NAME='ssh'
+
+# Your service's port
+# 内网的主机上你的服务所占用的端口号
+# 比如你想内内网主机的ssh暴露到公网上，那么就可以设置LOCAL_PORT=22
+# 因为内网主机的ssh服务的端口是22
+LOCAL_PORT='22'
+
+# FRP token
+# 用于公网服务器和内网服务器之间的FRP服务连接进行验证的密码
+FRP_TOKEN='123456@!(xixihaha)'
+
+# User name which can be used to identify the service
+# 自动获取用户的用户名，用于区分服务是谁创建的
+USER_NAME=${USER}
+
+
+#########################################
+#===========FRP configuration file=======
+# FRP配置文件的名字
+
 # frp client configuration filename
+# FRP客户端配置文件的名字
 FRPCCONF=frpc_${USER_NAME}.toml
-# frp server configuration filename
+# FRP server configuration filename
+# FRP服务器端配置文件的名字
 FRPSCONF=frps_${USER_NAME}.toml
 
+
+
+
+#########################################
 #=========service configuration =========
-# frp service type(only support systemd or initd)
+# 安装到系统的服务相关的配置
+# FRP service type(only support systemd or initd)
 SERVICETYPE=systemd
-# frp client service name
+# FRP client service name
+# FRP客户端服务的名字
 FRPC=frpc_${USER_NAME}
-# frp server service name
+# FRP server service name
+# FRP服务端服务的名字
 FRPS=frps_${USER_NAME}
-
-
 
 
 
@@ -53,7 +90,7 @@ auth.method = \"token\"
 auth.token = \"${FRP_TOKEN}\"
 
 [[proxies]]
-name = \"ssh\"
+name = ${SERVICE_NAME}
 type = \"tcp\"
 localIP = \"127.0.0.1\"
 localPort = ${LOCAL_SSH_PORT}
@@ -72,16 +109,15 @@ auth.token = \"${FRP_TOKEN}\"
 webServer.addr = \"127.0.0.1\"
 webServer.port = 7500
 webServer.user = \"admin\"
-webServer.password = \"adminxdaas\"
+webServer.password = \"adminxdaas@d@xxx\"
 " | sudo tee /etc/frp/${FRPSCONF}
 }
 
 install_frps_systemd_service() {
      echo "
 [Unit]
-Description=frps daemon
+Description=FRP Server Daemon
 After=network.target
-After=systemd-user-sessions.service
 After=network-online.target
 
 [Service]
@@ -107,9 +143,8 @@ uninstall_frps_systemd_service() {
 install_frpc_systemd_service() {
      echo "
 [Unit]
-Description=frpc daemon
+Description=FRP Client Daemon
 After=network.target
-After=systemd-user-sessions.service
 After=network-online.target
 
 [Service]
@@ -191,13 +226,13 @@ install_frp() {
     download_frp_64
 
     if [ ! -f /usr/bin/frpc ]; then
-        echo "Copying ${TARDIR}/frpc to /usr/bin/frpc"
-        sudo cp ${TARDIR}/frpc /usr/bin/frpc
+        echo "Copying ${TARDIR}/frpc to /usr/local/bin/frpc"
+        sudo cp ${TARDIR}/frpc /usr/local/bin/frpc
     fi
 
     if [ ! -f /usr/bin/frps ]; then
-        echo "Copying ${TARDIR}/frps to /usr/bin/frps"
-        sudo cp ${TARDIR}/frps /usr/bin/frps
+        echo "Copying ${TARDIR}/frps to /usr/local/bin/frps"
+        sudo cp ${TARDIR}/frps /usr/local/bin/frps
     fi
 
     if [ ! -d /etc/frp ]; then
@@ -210,12 +245,12 @@ install_frp() {
 
 uninstall_frp() {
     if [ -f /usr/bin/frpc ]; then
-        echo 'Deleting frpc to /usr/bin/frpc'
-        sudo rm -rf /usr/bin/frpc
+        echo 'Deleting frpc to /usr/local/bin/frpc'
+        sudo rm -rf /usr/local/bin/frpc
     fi
     if [ -f /usr/bin/frps ]; then
-        echo 'Deleting frps to /usr/bin/frps'
-        sudo rm -rf /usr/bin/frps
+        echo 'Deleting frps to /usr/local/bin/frps'
+        sudo rm -rf /usr/local/bin/frps
     fi
     if [ ! -d /etc/frp ]; then
         echo 'Deleting frp configuration directory'
