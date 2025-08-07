@@ -41,7 +41,7 @@ SERVICE_NAME='ssh'
 # 内网的主机上你的服务所占用的端口号
 # 比如你想内内网主机的ssh暴露到公网上，那么就可以设置LOCAL_PORT=22
 # 因为内网主机的ssh服务的端口是22
-LOCAL_PORT='22'
+LOCAL_SERVICE_PORT='22'
 
 # FRP token
 # 用于公网服务器和内网服务器之间的FRP服务连接进行验证的密码
@@ -93,7 +93,7 @@ auth.token = \"${FRP_TOKEN}\"
 name = ${SERVICE_NAME}
 type = \"tcp\"
 localIP = \"127.0.0.1\"
-localPort = ${LOCAL_SSH_PORT}
+localPort = ${LOCAL_SERVICE_PORT}
 remotePort = ${FRP_INET_PORT}
 " | sudo tee /etc/frp/${FRPCCONF}
 }
