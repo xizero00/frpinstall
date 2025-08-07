@@ -122,7 +122,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/frps -c /etc/frp/${FRPSCONF}
+ExecStart=/usr/local/bin/frps -c /etc/frp/${FRPSCONF}
 Restart=on-failure
 RestartSec=30
 
@@ -149,7 +149,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/frpc -c /etc/frp/${FRPCCONF}
+ExecStart=/usr/local/bin/frpc -c /etc/frp/${FRPCCONF}
 Restart=on-failure
 RestartSec=5
 
@@ -225,12 +225,12 @@ download_frp_64() {
 install_frp() {
     download_frp_64
 
-    if [ ! -f /usr/bin/frpc ]; then
+    if [ ! -f /usr/local/bin/frpc ]; then
         echo "Copying ${TARDIR}/frpc to /usr/local/bin/frpc"
         sudo cp ${TARDIR}/frpc /usr/local/bin/frpc
     fi
 
-    if [ ! -f /usr/bin/frps ]; then
+    if [ ! -f /usr/local/bin/frps ]; then
         echo "Copying ${TARDIR}/frps to /usr/local/bin/frps"
         sudo cp ${TARDIR}/frps /usr/local/bin/frps
     fi
@@ -244,11 +244,11 @@ install_frp() {
 }
 
 uninstall_frp() {
-    if [ -f /usr/bin/frpc ]; then
+    if [ -f /usr/local/bin/frpc ]; then
         echo 'Deleting frpc to /usr/local/bin/frpc'
         sudo rm -rf /usr/local/bin/frpc
     fi
-    if [ -f /usr/bin/frps ]; then
+    if [ -f /usr/local/bin/frps ]; then
         echo 'Deleting frps to /usr/local/bin/frps'
         sudo rm -rf /usr/local/bin/frps
     fi
