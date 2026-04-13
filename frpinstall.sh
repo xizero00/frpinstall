@@ -7,7 +7,7 @@ set -e
 # FRP version
 # please refer to https://github.com/fatedier/frp/releases
 # 你可以根据FRP的github的release来修改该URL，使其下载最新的FRP程序
-FRPURL='https://mirror.ghproxy.com/https://github.com/fatedier/frp/releases/download/v0.63.0/frp_0.63.0_linux_amd64.tar.gz'
+FRPURL='https://mirror.ghproxy.com/https://github.com/fatedier/frp/releases/download/v0.68.0/frp_0.68.0_linux_amd64.tar.gz'
 
 
 #########################################
