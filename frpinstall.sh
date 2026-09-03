@@ -36,9 +36,10 @@ source "$CONFIG_FILE"
 : "${FRP_ARCH:=linux_amd64}"
 : "${FRP_SERVER_IP:=127.0.0.1}"
 : "${FRP_SERVER_PORT:=7000}"
-: "${FRP_INET_PORT:=10022}"
-: "${SERVICE_NAME:=ssh}"
-: "${LOCAL_SERVICE_PORT:=22}"
+: "${FRP_INET_PORT:=}"
+: "${SERVICE_NAME:=}"
+: "${LOCAL_SERVICE_PORT:=}"
+: "${FRPC_SERVICES_FILE:=${SCRIPT_DIR}/frpc_services.toml}"
 : "${FRP_TOKEN:=123456@!(xixihaha)}"
 : "${USER_NAME:=${USER}}"
 : "${FRP_WEB_SERVER_PORT:=7500}"
@@ -387,14 +388,29 @@ uninstall_frp() {
 # ========== 配置文件安装 ==========
 #########################################
 
-install_frpc_config() {
-    log "正在安装 FRP 客户端配置文件 /etc/frp/${FRPCCONF}"
-    sudo tee "/etc/frp/${FRPCCONF}" >/dev/null <<EOF
+#################################
+# ========== frpc 配置文件 ==========
+#################################
+
+# 生成 frpc 配置内容：
+#   连接信息（serverAddr / serverPort / token）由 frp.conf 生成，
+#   需要映射的服务从 frpc_services.toml 读取（可定义多个 [[proxies]]）。
+build_frpc_config() {
+    local services_file="${FRPC_SERVICES_FILE}"
+    cat <<EOF
 serverAddr = "${FRP_SERVER_IP}"
 serverPort = ${FRP_SERVER_PORT}
 
 auth.method = "token"
 auth.token = "${FRP_TOKEN}"
+EOF
+
+    if [ -f "$services_file" ]; then
+        printf '\n'
+        cat "$services_file"
+    elif [ -n "$SERVICE_NAME" ] && [ -n "$LOCAL_SERVICE_PORT" ] && [ -n "$FRP_INET_PORT" ]; then
+        # 兼容旧版本：frp.conf 里仍直接写了单个服务映射时使用
+        cat <<EOF
 
 [[proxies]]
 name = "${SERVICE_NAME}"
@@ -403,6 +419,15 @@ localIP = "127.0.0.1"
 localPort = ${LOCAL_SERVICE_PORT}
 remotePort = ${FRP_INET_PORT}
 EOF
+    else
+        log "警告: 未找到服务映射文件 ${services_file}，frpc 将不包含任何 [[proxies]]"
+        log "      请参考同目录下的 frpc_services.toml 添加需要映射的服务"
+    fi
+}
+
+install_frpc_config() {
+    log "正在安装 FRP 客户端配置文件 /etc/frp/${FRPCCONF}"
+    build_frpc_config | sudo tee "/etc/frp/${FRPCCONF}" >/dev/null
 }
 
 install_frps_config() {

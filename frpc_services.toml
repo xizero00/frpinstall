@@ -1,0 +1,30 @@
+# ============================================================
+# frpc 服务映射配置
+#
+# 这里定义“需要从内网映射到公网”的服务（frp 的 proxies）。
+# 语法与 frp 官方客户端配置一致，可写多个 [[proxies]]，
+# 安装 frpc 时脚本会把它合并进 /etc/frp/frpc_${USER}.toml。
+#
+# 参考文档：
+#   https://github.com/fatedier/frp/blob/dev/README.md#example-usage
+# ============================================================
+
+# 示例：把内网 ssh（127.0.0.1:22）映射到公网 10022 端口
+[[proxies]]
+name = "ssh"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 10022
+
+# 需要映射更多服务时，复制并取消下面注释即可，例如内网 8080 端口
+# 的 Web 服务映射到公网 80 端口：
+#
+# [[proxies]]
+# name = "web"
+# type = "tcp"
+# localIP = "127.0.0.1"
+# localPort = 8080
+# remotePort = 80
+
+# 也可以使用 udp / http / https 等其他类型，按官方文档填写即可。

@@ -6,7 +6,7 @@
 
 - 自动选择最快的 GitHub 下载代理：数据来自 [Mirror 检测站](https://demo.kentxxq.com/app/mirror)（脚本直接使用该页面背后的检测接口），在“最近一次检测成功”的代理中，选取最近 5 次成功检测平均耗时最短的代理下载。
 - 自动检测官方最新版本：自动查询 `fatedier/frp` 的最新 Release 并下载最新版；也可在配置中固定版本。
-- 配置独立：所有需要修改的参数都集中在 [frp.conf](frp.conf)，主脚本无需改动。
+- 配置独立：安装参数集中在 [frp.conf](frp.conf)，frpc 需要映射的服务在 [frpc_services.toml](frpc_services.toml) 中按 frp 原生语法定义，支持多个服务，主脚本无需改动。
 - 旧代码归档：重构前的代码完整保存在 [prev_code](prev_code) 目录，便于对比回退。
 
 ## 目录结构
@@ -15,6 +15,7 @@
 frpinstall/
 ├── frpinstall.sh       # 主安装脚本（一般不需要修改）
 ├── frp.conf            # 配置文件：镜像、版本、IP、端口、密码等
+├── frpc_services.toml  # frpc 要映射到公网的服务（可写多个 [[proxies]]）
 ├── scripts/
 │   ├── frpc_initd.sh   # initd 客户端服务模板
 │   ├── frps_initd.sh   # initd 服务端服务模板
@@ -34,7 +35,8 @@ cd frpinstall
 编辑配置文件：
 
 ```bash
-vim frp.conf
+vim frp.conf             # 镜像 / 版本 / 服务器连接信息
+vim frpc_services.toml   # frpc 需要映射的服务（ssh、web 等）
 ```
 
 安装 FRP 服务端（含 frps 服务）：
@@ -79,18 +81,39 @@ FRP_VERSION='0.71.0'
 
 平台架构通过 `FRP_ARCH` 指定，默认 `linux_amd64`。
 
-### 连接参数
+### frpc 服务映射（frpc_services.toml）
+
+需要从内网暴露到公网的服务不写在 frp.conf 里，而是统一写在同目录的 [frpc_services.toml](frpc_services.toml)，按 frp 官方 `[[proxies]]` 语法配置，可同时定义多个服务，例如：
+
+```toml
+[[proxies]]
+name = "ssh"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 10022
+
+[[proxies]]
+name = "web"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 8080
+remotePort = 80
+```
+
+安装 frpc 时，脚本会把“服务器连接信息（frp.conf）+ 这里的服务映射”合并成最终的 `/etc/frp/frpc_${USER}.toml`。
+
+### 连接参数（frp.conf）
 
 | 变量 | 说明 |
 | --- | --- |
 | `FRP_SERVER_IP` | 公网服务器 IP |
 | `FRP_SERVER_PORT` | 公网服务器上的 FRP 服务端口 |
-| `FRP_INET_PORT` | 对外提供服务的外网端口 |
-| `SERVICE_NAME` | 服务名称（不要带空格），如 `ssh` |
-| `LOCAL_SERVICE_PORT` | 内网实际服务端口 |
 | `FRP_TOKEN` | FRP 服务端/客户端校验密码 |
 | `USER_NAME` | 用于区分服务归属，默认取当前用户 |
 | `FRP_WEB_SERVER_*` | frps 自带 Web 面板设置 |
+
+> 服务名与内/外网端口等映射参数均在 `frpc_services.toml` 中配置。
 
 ## 安装选项
 

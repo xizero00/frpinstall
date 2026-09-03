@@ -5,3 +5,4 @@ frp_*/
 # 临时文件
 wget-log
 *.log
+*.swp
