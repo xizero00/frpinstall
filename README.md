@@ -122,14 +122,14 @@ remotePort = 80
 ## 安装选项
 
 ```text
-install-frp               安装 FRP 二进制与配置文件（不装服务）
-uninstall-frp             卸载 FRP 二进制与配置文件
+install-frp               安装 FRP 二进制、配置文件，并安装 frpc + frps 服务
+uninstall-frp             卸载 FRP 二进制、配置文件，并删除 frpc + frps 服务
 install-frpc              安装 FRP 二进制、配置文件与 frpc（客户端）服务
 uninstall-frpc            卸载 FRP 二进制、配置文件与 frpc 服务
 install-frps              安装 FRP 二进制、配置文件与 frps（服务端）服务
 uninstall-frps            卸载 FRP 二进制、配置文件与 frps 服务
 
-仅安装/卸载服务（需先执行 install-frp）：
+仅安装/卸载服务（需已安装 FRP 二进制与配置）：
 install-frpc-service      安装 frpc（客户端）服务
 uninstall-frpc-service    卸载 frpc（客户端）服务
 install-frps-service      安装 frps（服务端）服务

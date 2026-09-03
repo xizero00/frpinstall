@@ -615,8 +615,8 @@ usage() {
 Usage: ./frpinstall.sh <命令>
 
 常用命令：
-  install-frp               安装 FRP 二进制与配置文件（不装服务）
-  uninstall-frp             卸载 FRP 二进制与配置文件
+  install-frp               安装 FRP 二进制、配置文件，并安装 frpc + frps 服务
+  uninstall-frp             卸载 FRP 二进制、配置文件，并删除 frpc + frps 服务
 
   install-frpc              安装 FRP 二进制、配置文件与 frpc（客户端）服务
   uninstall-frpc            卸载 FRP 二进制、配置文件与 frpc 服务
@@ -624,7 +624,7 @@ Usage: ./frpinstall.sh <命令>
   install-frps              安装 FRP 二进制、配置文件与 frps（服务端）服务
   uninstall-frps            卸载 FRP 二进制、配置文件与 frps 服务
 
-仅安装/卸载服务（需要先 install-frp）：
+仅安装/卸载服务（需已安装 FRP 二进制与配置）：
   install-frpc-service      安装 frpc（客户端）服务
   uninstall-frpc-service    卸载 frpc（客户端）服务
   install-frps-service      安装 frps（服务端）服务
@@ -661,9 +661,13 @@ main() {
         install-frp|ins_frp)
             prepare_frp_download
             install_frp
+            install_frpc_service
+            install_frps_service
             ;;
         uninstall-frp|unins_frp)
             uninstall_frp
+            uninstall_frpc_service
+            uninstall_frps_service
             ;;
         install-frpc-service|ins_c_serv)
             install_frpc_service
