@@ -418,11 +418,12 @@ expand_frp_template() {
 # 从 frp_template.toml 中提取指定 TOML 段（[frpc] / [frps]）
 extract_frp_section() {
     local section="$1"
-    local src="$2"
-    awk -v sec="[$section]" '
+    local other="$2"
+    local src="$3"
+    awk -v sec="[$section]" -v other="$other" '
         $0 == sec { active = 1; next }
         active && /^\[[A-Za-z_]/ { exit }
-        active && /\[frps\]/ { exit }
+        active && index($0, other) { exit }
         active { print }
     ' "$src"
 }
@@ -436,7 +437,7 @@ install_frpc_config() {
         die "未找到配置模板 ${FRP_CONFIG_FILE}，请先编辑同目录的 frp_template.toml"
     fi
     content=$(expand_frp_template "$FRP_CONFIG_FILE" |
-        extract_frp_section "frpc" /dev/stdin)
+        extract_frp_section "frpc" "[frps]" /dev/stdin)
     if [ -z "$content" ]; then
         die "模板中找不到 [frpc] 段，请检查 ${FRP_CONFIG_FILE}"
     fi
@@ -452,7 +453,7 @@ install_frps_config() {
         die "未找到配置模板 ${FRP_CONFIG_FILE}，请先编辑同目录的 frp_template.toml"
     fi
     content=$(expand_frp_template "$FRP_CONFIG_FILE" |
-        extract_frp_section "frps" /dev/stdin)
+        extract_frp_section "frps" "[frpc]" /dev/stdin)
     if [ -z "$content" ]; then
         die "模板中找不到 [frps] 段，请检查 ${FRP_CONFIG_FILE}"
     fi

@@ -6,7 +6,7 @@
 
 - 自动选择最快的 GitHub 下载代理：数据来自 [Mirror 检测站](https://demo.kentxxq.com/app/mirror)（脚本直接使用该页面背后的检测接口），在“最近一次检测成功”的代理中，选取最近 5 次成功检测平均耗时最短的代理下载。
 - 自动检测官方最新版本：自动查询 `fatedier/frp` 的最新 Release 并下载最新版；也可在配置中固定版本。
-- 单个配置模板：[frp_template.toml](frp_template.toml) 用 `[common]`、`[frpc]`、`[frps]` 三段保存全部 frp 配置；两端重叠的端口、token 只需在 `[common]` 改一次。
+- 单个配置模板：[frp_template.toml](frp_template.toml) 用 `[common]`、`[frps]`、`[frpc]` 三段保存全部 frp 配置；两端重叠的端口、token 只需在 `[common]` 改一次。
 - 安装时脚本读取模板，用 `[common]` 的值替换 `[frpc]` / `[frps]` 中的占位符，再分别生成 `/etc/frp` 下的正式配置。
 - [frp.conf](frp.conf) 只保存与 frp 配置内容无关的安装设置。
 - 旧代码归档：重构前的代码完整保存在 [prev_code](prev_code) 目录，便于对比回退。
@@ -17,7 +17,7 @@
 frpinstall/
 ├── frpinstall.sh       # 主安装脚本（一般不需要修改）
 ├── frp.conf            # 安装设置：镜像、版本、服务类型、用户名等
-├── frp_template.toml   # frp 配置模板：[common] + [frpc] + [frps]
+├── frp_template.toml   # frp 配置模板：[common] + [frps] + [frpc]
 ├── scripts/
 │   ├── frpc_initd.sh   # initd 客户端服务模板
 │   ├── frps_initd.sh   # initd 服务端服务模板
@@ -38,7 +38,7 @@ cd frpinstall
 
 ```bash
 vim frp.conf           # 安装设置（镜像、版本等）
-vim frp_template.toml  # [common] 公共参数 + [frpc] / [frps] 配置
+vim frp_template.toml  # [common] 公共参数 + [frps] / [frpc] 配置
 ```
 
 安装 FRP 服务端（含 frps 服务）：
@@ -67,6 +67,17 @@ vim frp_template.toml  # [common] 公共参数 + [frpc] / [frps] 配置
 serverPort = 7000          # frpc 连接 / frps 监听的端口
 token = "你的token"        # 两端连接校验密码
 
+# ============ [frps] FRP 服务端 ============
+[frps]
+bindPort = ${serverPort}
+auth.method = "token"
+auth.token = "${token}"
+
+webServer.addr = "127.0.0.1"
+webServer.port = 7500
+webServer.user = "admin"
+webServer.password = "你的面板密码"
+
 # ============ [frpc] FRP 客户端 ============
 [frpc]
 serverAddr = "1.2.3.4"     # 公网服务器 IP / 域名
@@ -87,22 +98,11 @@ type = "tcp"
 localIP = "127.0.0.1"
 localPort = 8080
 remotePort = 80
-
-# ============ [frps] FRP 服务端 ============
-[frps]
-bindPort = ${serverPort}
-auth.method = "token"
-auth.token = "${token}"
-
-webServer.addr = "127.0.0.1"
-webServer.port = 7500
-webServer.user = "admin"
-webServer.password = "你的面板密码"
 ```
 
 - `[common]`：frpc / frps 重叠的公共参数，只需修改一次。
-- `[frpc]`：客户端专属配置（`serverAddr`、`[[proxies]]` 等）。
 - `[frps]`：服务端专属配置（`webServer` 等）。
+- `[frpc]`：客户端专属配置（`serverAddr`、`[[proxies]]` 等）。
 - 段内出现的 `${serverPort}`、`${token}` 是占位符，安装时自动替换为 `[common]` 中的值，无需手改。
 
 ### frp.conf
