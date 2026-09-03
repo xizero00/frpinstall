@@ -1,0 +1,67 @@
+# ============================================================
+# frp 配置模板（frpc + frps + 公共参数 合并）
+#
+#   [common] 段：frpc 与 frps 重叠的公共参数，只需在这里改一次
+#   [frpc]  段：FRP 客户端配置，安装时提取生成 frpc_${USER_NAME}.toml
+#   [frps]  段：FRP 服务端配置，安装时提取生成 frps_${USER_NAME}.toml
+#
+# 参考文档：
+#   https://github.com/fatedier/frp/blob/dev/README.md#example-usage
+# ============================================================
+
+
+[common]
+
+# serverPort：frpc 连接 / frps 监听的端口
+# token：两端连接校验密码
+serverPort = 7000
+token = "123456@!(xixihaha)"
+
+
+# ================== [frpc] ==================
+[frpc]
+
+# serverAddr：改成你的公网服务器 IP / 域名
+# [[proxies]]：需要映射到公网的服务，可写多个
+# 公共参数（serverPort、token）安装时自动替换为 [common] 里的值
+
+serverAddr = "127.0.0.1"
+serverPort = ${serverPort}
+
+auth.method = "token"
+auth.token = "${token}"
+
+# 示例：把内网 ssh（127.0.0.1:22）映射到公网 10022 端口
+[[proxies]]
+name = "ssh"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 10022
+
+# 更多服务：复制并修改下面的示例，例如内网 8080 的 Web 服务
+# 映射到公网 80 端口：
+#
+# [[proxies]]
+# name = "web"
+# type = "tcp"
+# localIP = "127.0.0.1"
+# localPort = 8080
+# remotePort = 80
+
+
+# ================== [frps] ==================
+[frps]
+
+# webServer.*：frps 自带 Web 面板（按需修改）
+# 公共参数（serverPort、token）安装时自动替换为 [common] 里的值
+
+bindPort = ${serverPort}
+
+auth.method = "token"
+auth.token = "${token}"
+
+webServer.addr = "127.0.0.1"
+webServer.port = 7500
+webServer.user = "admin"
+webServer.password = "adminxdaas@d@xxx"
