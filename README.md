@@ -44,13 +44,13 @@ vim frp_template.toml  # [common] 公共参数 + [frps] / [frpc] 配置
 安装 FRP 服务端（含 frps 服务）：
 
 ```bash
-./frpinstall.sh ins_frps_s
+./frpinstall.sh install-frps
 ```
 
 安装 FRP 客户端（含 frpc 服务）：
 
 ```bash
-./frpinstall.sh ins_frpc_s
+./frpinstall.sh install-frpc
 ```
 
 > 脚本内部会调用 `sudo`，请使用有 sudo 权限的账号运行。
@@ -122,21 +122,30 @@ remotePort = 80
 ## 安装选项
 
 ```text
-ins_frp       安装 FRP 二进制与配置文件（不装服务）
-ins_frpc_s    安装 FRP 与客户端服务
-ins_frps_s    安装 FRP 与服务端服务
-unins_frpc_s  卸载 FRP 与客户端服务
-unins_frps_s  卸载 FRP 与服务端服务
+install-frp               安装 FRP 二进制与配置文件（不装服务）
+uninstall-frp             卸载 FRP 二进制与配置文件
+install-frpc              安装 FRP 二进制、配置文件与 frpc（客户端）服务
+uninstall-frpc            卸载 FRP 二进制、配置文件与 frpc 服务
+install-frps              安装 FRP 二进制、配置文件与 frps（服务端）服务
+uninstall-frps            卸载 FRP 二进制、配置文件与 frps 服务
+
+仅安装/卸载服务（需先执行 install-frp）：
+install-frpc-service      安装 frpc（客户端）服务
+uninstall-frpc-service    卸载 frpc（客户端）服务
+install-frps-service      安装 frps（服务端）服务
+uninstall-frps-service    卸载 frps（服务端）服务
 ```
 
 示例：
 
 ```bash
-./frpinstall.sh ins_frpc_s     # 安装客户端
-./frpinstall.sh ins_frps_s     # 安装服务端
-./frpinstall.sh unins_frpc_s   # 卸载客户端
-./frpinstall.sh unins_frps_s   # 卸载服务端
+./frpinstall.sh install-frpc        # 安装客户端（二进制 + 配置 + 服务）
+./frpinstall.sh install-frps        # 安装服务端（二进制 + 配置 + 服务）
+./frpinstall.sh uninstall-frpc      # 卸载客户端
+./frpinstall.sh uninstall-frps      # 卸载服务端
 ```
+
+> 旧的 `ins_frp` / `ins_frpc_s` / `ins_frps_s` / `unins_*` 写法仍兼容可用。
 
 ## 生成的配置文件与服务管理
 

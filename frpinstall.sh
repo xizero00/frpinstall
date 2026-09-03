@@ -612,57 +612,69 @@ uninstall_frps_service() {
 
 usage() {
     cat <<'EOF'
-Usage: ./frpinstall.sh {ins_frp|ins_frpc_s|ins_frps_s|unins_frpc_s|unins_frps_s}
+Usage: ./frpinstall.sh <命令>
 
-支持安装 systemd（已测试）与 initd（未测试）服务。
+常用命令：
+  install-frp               安装 FRP 二进制与配置文件（不装服务）
+  uninstall-frp             卸载 FRP 二进制与配置文件
 
-  ins_frp       安装 FRP 二进制文件与配置文件（不安装服务）
-  ins_frpc_s    安装 FRP 二进制、配置文件与客户端服务
-  ins_frps_s    安装 FRP 二进制、配置文件与服务端服务
-  unins_frpc_s  删除 FRP 二进制、配置文件与客户端服务
-  unins_frps_s  删除 FRP 二进制、配置文件与服务端服务
+  install-frpc              安装 FRP 二进制、配置文件与 frpc（客户端）服务
+  uninstall-frpc            卸载 FRP 二进制、配置文件与 frpc 服务
 
-所有可配置项都在同目录的 frp.conf 中，请先按需修改。
+  install-frps              安装 FRP 二进制、配置文件与 frps（服务端）服务
+  uninstall-frps            卸载 FRP 二进制、配置文件与 frps 服务
+
+仅安装/卸载服务（需要先 install-frp）：
+  install-frpc-service      安装 frpc（客户端）服务
+  uninstall-frpc-service    卸载 frpc（客户端）服务
+  install-frps-service      安装 frps（服务端）服务
+  uninstall-frps-service    卸载 frps（服务端）服务
+
+兼容旧写法：ins_frp / unins_frp / ins_frpc_s / ins_frps_s /
+unins_frpc_s / unins_frps_s 仍可使用。
+
+支持 systemd（已测试）与 initd（未测试）。安装前请先编辑
+frp.conf 与 frp_template.toml。
 EOF
 }
 
 main() {
     case "$1" in
-        ins_frpc_s)
+        install-frpc|ins_frpc_s)
             prepare_frp_download
             install_frp
             install_frpc_service
             ;;
-        unins_frpc_s)
+        uninstall-frpc|unins_frpc_s)
             uninstall_frp
             uninstall_frpc_service
             ;;
-        ins_frps_s)
+        install-frps|ins_frps_s)
             prepare_frp_download
             install_frp
             install_frps_service
             ;;
-        unins_frps_s)
+        uninstall-frps|unins_frps_s)
             uninstall_frp
             uninstall_frps_service
             ;;
-        ins_frp)
+        install-frp|ins_frp)
             prepare_frp_download
             install_frp
             ;;
-        unins_frp)
+        uninstall-frp|unins_frp)
             uninstall_frp
             ;;
-        ins_c_serv)
+        install-frpc-service|ins_c_serv)
             install_frpc_service
             ;;
-        ins_s_serv)
+        install-frps-service|ins_s_serv)
             install_frps_service
             ;;
-        unins_c_serv)
+        uninstall-frpc-service|unins_c_serv)
             uninstall_frpc_service
             ;;
-        unins_s_serv)
+        uninstall-frps-service|unins_s_serv)
             uninstall_frps_service
             ;;
         *)
