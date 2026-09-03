@@ -9,7 +9,7 @@ set -e
 #      所使用的数据接口获取 GitHub 代理列表，自动选择“最近检测通过、
 #      平均速度最快”的代理下载 FRP。
 #   2. 自动查询 fatedier/frp 官方最新 Release 并下载最新版本。
-#   3. 所有可配置项都集中在同目录下的 frp.conf 中。
+#   3. frpc.toml / frps.toml 即完整的 frp 配置；frp.conf 只放安装设置。
 #
 #  用法：./frpinstall.sh <ins_frp|ins_frpc_s|ins_frps_s|...>
 #########################################
@@ -34,18 +34,10 @@ source "$CONFIG_FILE"
 : "${AUTO_DETECT_LATEST_VERSION:=true}"
 : "${FRP_VERSION:=0.71.0}"
 : "${FRP_ARCH:=linux_amd64}"
-: "${FRP_SERVER_IP:=127.0.0.1}"
-: "${FRP_SERVER_PORT:=7000}"
-: "${FRP_INET_PORT:=}"
-: "${SERVICE_NAME:=}"
-: "${LOCAL_SERVICE_PORT:=}"
-: "${FRPC_SERVICES_FILE:=${SCRIPT_DIR}/frpc_services.toml}"
-: "${FRP_TOKEN:=123456@!(xixihaha)}"
 : "${USER_NAME:=${USER}}"
-: "${FRP_WEB_SERVER_PORT:=7500}"
-: "${FRP_WEB_SERVER_USER:=admin}"
-: "${FRP_WEB_SERVER_PASSWORD:=adminxdaas@d@xxx}"
 : "${SERVICETYPE:=systemd}"
+: "${FRPC_CONFIG_FILE:=${SCRIPT_DIR}/frpc.toml}"
+: "${FRPS_CONFIG_FILE:=${SCRIPT_DIR}/frps.toml}"
 
 # ---------- FRP 文件名 / 服务名（依赖上面配置） ----------
 FRPCCONF="frpc_${USER_NAME}.toml"
@@ -388,61 +380,22 @@ uninstall_frp() {
 # ========== 配置文件安装 ==========
 #########################################
 
-#################################
-# ========== frpc 配置文件 ==========
-#################################
-
-# 生成 frpc 配置内容：
-#   连接信息（serverAddr / serverPort / token）由 frp.conf 生成，
-#   需要映射的服务从 frpc_services.toml 读取（可定义多个 [[proxies]]）。
-build_frpc_config() {
-    local services_file="${FRPC_SERVICES_FILE}"
-    cat <<EOF
-serverAddr = "${FRP_SERVER_IP}"
-serverPort = ${FRP_SERVER_PORT}
-
-auth.method = "token"
-auth.token = "${FRP_TOKEN}"
-EOF
-
-    if [ -f "$services_file" ]; then
-        printf '\n'
-        cat "$services_file"
-    elif [ -n "$SERVICE_NAME" ] && [ -n "$LOCAL_SERVICE_PORT" ] && [ -n "$FRP_INET_PORT" ]; then
-        # 兼容旧版本：frp.conf 里仍直接写了单个服务映射时使用
-        cat <<EOF
-
-[[proxies]]
-name = "${SERVICE_NAME}"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = ${LOCAL_SERVICE_PORT}
-remotePort = ${FRP_INET_PORT}
-EOF
-    else
-        log "警告: 未找到服务映射文件 ${services_file}，frpc 将不包含任何 [[proxies]]"
-        log "      请参考同目录下的 frpc_services.toml 添加需要映射的服务"
-    fi
-}
-
+# 读取 frpc.toml 模板，安装为 /etc/frp/frpc_${USER_NAME}.toml
 install_frpc_config() {
     log "正在安装 FRP 客户端配置文件 /etc/frp/${FRPCCONF}"
-    build_frpc_config | sudo tee "/etc/frp/${FRPCCONF}" >/dev/null
+    if [ ! -f "$FRPC_CONFIG_FILE" ]; then
+        die "未找到 frpc 配置模板 ${FRPC_CONFIG_FILE}，请先编辑同目录的 frpc.toml"
+    fi
+    sudo cp "$FRPC_CONFIG_FILE" "/etc/frp/${FRPCCONF}"
 }
 
+# 读取 frps.toml 模板，安装为 /etc/frp/frps_${USER_NAME}.toml
 install_frps_config() {
     log "正在安装 FRP 服务端配置文件 /etc/frp/${FRPSCONF}"
-    sudo tee "/etc/frp/${FRPSCONF}" >/dev/null <<EOF
-bindPort = ${FRP_SERVER_PORT}
-
-auth.method = "token"
-auth.token = "${FRP_TOKEN}"
-
-webServer.addr = "127.0.0.1"
-webServer.port = ${FRP_WEB_SERVER_PORT}
-webServer.user = "${FRP_WEB_SERVER_USER}"
-webServer.password = "${FRP_WEB_SERVER_PASSWORD}"
-EOF
+    if [ ! -f "$FRPS_CONFIG_FILE" ]; then
+        die "未找到 frps 配置模板 ${FRPS_CONFIG_FILE}，请先编辑同目录的 frps.toml"
+    fi
+    sudo cp "$FRPS_CONFIG_FILE" "/etc/frp/${FRPSCONF}"
 }
 
 
