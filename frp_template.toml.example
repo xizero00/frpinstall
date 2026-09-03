@@ -1,0 +1,75 @@
+# ============================================================
+# frp 配置模板示例（无真实密钥，可安全提交到 Git）
+#
+#   本文件只是给新环境用的模板：
+#   1. 先复制成本地真实配置：
+#        cp frp_template.toml.example frp_template.toml
+#   2. 修改 frp_template.toml 里的 token / 域名 / 端口 / 账号密码。
+#
+#   frp_template.toml 包含真实密钥，已在 .gitignore 中忽略，
+#   不要把本文件之外的真实 token 提交到 GitHub / AtomGit。
+#
+#   [common] 段：frpc 与 frps 重叠的公共参数，只需在这里改一次
+#   [frps]  段：FRP 服务端配置，安装时提取生成 frps_${USER_NAME}.toml
+#   [frpc]  段：FRP 客户端配置，安装时提取生成 frpc_${USER_NAME}.toml
+# ============================================================
+
+
+# ================== [common] 公共参数 ==================
+[common]
+
+# serverPort：frpc 连接 / frps 监听的端口
+# token：两端连接校验密码（务必改成你自己的强密码）
+serverPort = 7000
+token = "CHANGE_ME_TOKEN"
+
+
+# ================== [frps] ==================
+[frps]
+
+# FRP 服务端配置
+# webServer.*：frps 自带 Web 面板（按需修改）
+# 公共参数（serverPort、token）安装时自动替换为 [common] 里的值
+
+bindPort = ${serverPort}
+
+auth.method = "token"
+auth.token = "${token}"
+
+webServer.addr = "127.0.0.1"
+webServer.port = 7500
+webServer.user = "admin"
+webServer.password = "CHANGE_ME_PASSWORD"
+
+
+# ================== [frpc] ==================
+[frpc]
+
+# FRP 客户端配置
+# serverAddr：改成你的公网服务器 IP / 域名
+# [[proxies]]：需要映射到公网的服务，可写多个
+# 公共参数（serverPort、token）安装时自动替换为 [common] 里的值
+
+serverAddr = "frps.example.com"
+serverPort = ${serverPort}
+
+auth.method = "token"
+auth.token = "${token}"
+
+# 示例：把内网 ssh（127.0.0.1:22）映射到公网 10022 端口
+[[proxies]]
+name = "ssh"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 10022
+
+# 更多服务：复制并修改下面的示例，例如内网 8080 的 Web 服务
+# 映射到公网 80 端口：
+#
+# [[proxies]]
+# name = "web"
+# type = "tcp"
+# localIP = "127.0.0.1"
+# localPort = 8080
+# remotePort = 80
