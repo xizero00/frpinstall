@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>frps 管理面板</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ============ 登录页 ============ -->
+<div id="loginView" class="center-wrap hidden">
+  <div class="card login-card">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <h1>管理面板</h1>
+    </div>
+    <p class="muted">请输入账号和密码登录</p>
+    <form id="loginForm" autocomplete="on">
+      <label class="field">
+        <span>用户名</span>
+        <input id="loginUser" name="username" autocomplete="username" required
+               title="用户名">
+      </label>
+      <label class="field">
+        <span>密码</span>
+        <input id="loginPass" name="password" type="password"
+               autocomplete="current-password" required title="密码">
+      </label>
+      <div id="loginError" class="alert error hidden"></div>
+      <button id="loginBtn" class="btn primary block" type="submit">登 录</button>
+    </form>
+    <p class="foot muted">连续失败会临时锁定，请勿频繁尝试</p>
+  </div>
+</div>
+
+<!-- ============ 主界面 ============ -->
+<div id="appView" class="hidden">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo-dot"></span>
+      <span>frps 管理面板</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="overview">总览</button>
+      <button class="tab-btn" data-tab="clients">客户端</button>
+      <button class="tab-btn" data-tab="proxies">代理</button>
+      <button class="tab-btn" data-tab="users">用户</button>
+      <button class="tab-btn" data-tab="generator">配置生成</button>
+      <button class="tab-btn" data-tab="ops">运维</button>
+    </nav>
+    <div class="userbox">
+      <span id="currentUser" class="muted"></span>
+      <button id="logoutBtn" class="btn ghost small">退出</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 总览 -->
+    <section id="tab-overview" class="tab-page">
+      <div class="card">
+        <div class="card-head"><h2>运行总览</h2><button id="ovRefresh" class="btn ghost small">刷新</button></div>
+        <div id="ovCards" class="stat-grid"></div>
+      </div>
+      <div class="card">
+        <h2>服务器配置</h2>
+        <div id="ovConfig" class="kv-grid"></div>
+      </div>
+    </section>
+
+    <!-- 客户端 -->
+    <section id="tab-clients" class="tab-page hidden">
+      <div class="card">
+        <div class="filter-row">
+          <h2>客户端</h2>
+          <select id="clStatus" class="input">
+            <option value="">全部状态</option>
+            <option value="online">在线</option>
+            <option value="offline">离线</option>
+          </select>
+          <input id="clQ" class="input" placeholder="搜索 user / hostname / IP / runID">
+          <button id="clSearch" class="btn">查询</button>
+        </div>
+        <div id="clMeta" class="meta muted"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>用户</th><th>Hostname</th><th>IP</th><th>frp 版本</th>
+                <th>状态</th><th>最后连接</th>
+              </tr>
+            </thead>
+            <tbody id="clBody"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button id="clPrev" class="btn ghost small">上一页</button>
+          <span id="clPageInfo" class="muted"></span>
+          <button id="clNext" class="btn ghost small">下一页</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 代理 -->
+    <section id="tab-proxies" class="tab-page hidden">
+      <div class="card">
+        <div class="filter-row">
+          <h2>代理</h2>
+          <select id="pxType" class="input">
+            <option value="">全部类型</option>
+            <option value="tcp">TCP</option>
+            <option value="udp">UDP</option>
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+            <option value="tcpmux">TCPMUX</option>
+            <option value="stcp">STCP</option>
+            <option value="xtcp">XTCP</option>
+            <option value="sudp">SUDP</option>
+          </select>
+          <select id="pxStatus" class="input">
+            <option value="">全部状态</option>
+            <option value="online">在线</option>
+            <option value="offline">离线</option>
+          </select>
+          <input id="pxQ" class="input" placeholder="搜索名称 / user / clientID">
+          <button id="pxSearch" class="btn">查询</button>
+        </div>
+        <div id="pxMeta" class="meta muted"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>名称</th><th>类型</th><th>用户</th><th>clientID</th>
+                <th>状态</th><th>连接</th><th>今日入</th><th>今日出</th>
+              </tr>
+            </thead>
+            <tbody id="pxBody"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button id="pxPrev" class="btn ghost small">上一页</button>
+          <span id="pxPageInfo" class="muted"></span>
+          <button id="pxNext" class="btn ghost small">下一页</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 用户 -->
+    <section id="tab-users" class="tab-page hidden">
+      <div class="card">
+        <div class="filter-row">
+          <h2>用户统计</h2>
+          <input id="uQ" class="input" placeholder="搜索 user">
+          <button id="uSearch" class="btn">查询</button>
+        </div>
+        <div id="uMeta" class="meta muted"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>user（代理名前缀）</th><th>客户端数</th><th>代理数</th></tr>
+            </thead>
+            <tbody id="uBody"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button id="uPrev" class="btn ghost small">上一页</button>
+          <span id="uPageInfo" class="muted"></span>
+          <button id="uNext" class="btn ghost small">下一页</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- frpc 配置生成 -->
+    <section id="tab-generator" class="tab-page hidden">
+      <div class="card">
+        <div class="card-head">
+          <h2>1. 服务端连接参数</h2>
+          <span class="muted">自动从服务器配置带出，可修改</span>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>user（代理名前缀，建议每台机器唯一）</span>
+            <input id="genUser" class="input" placeholder="例如 home-pc">
+          </label>
+          <label class="field">
+            <span>serverAddr（frps 公网域名/IP）</span>
+            <input id="genServerAddr" class="input" placeholder="frps.example.com">
+          </label>
+          <label class="field">
+            <span>serverPort</span>
+            <input id="genServerPort" class="input" type="number" min="1" max="65535">
+          </label>
+          <label class="field">
+            <span>token</span>
+            <input id="genToken" class="input" type="password" autocomplete="off">
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>2. 要映射的服务</h2>
+          <button id="genAddProxy" class="btn small">＋ 添加代理</button>
+        </div>
+        <div id="genProxyRows"></div>
+        <p class="muted hint">tcp / udp 需要填写 remotePort；http / https 需要 customDomains 或 subdomain。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>3. 生成预览（可手工微调后再校验）</h2>
+          <div class="btn-group">
+            <button id="genRender" class="btn">生成预览</button>
+            <button id="genValidate" class="btn ghost">校验文本</button>
+            <button id="genCopy" class="btn ghost">复制</button>
+            <button id="genDownload" class="btn primary">下载配置</button>
+          </div>
+        </div>
+        <div id="genValidateMsg" class="alert hidden"></div>
+        <textarea id="genPreview" class="codearea" rows="20" spellcheck="false"
+                  placeholder="点击“生成预览”…"></textarea>
+      </div>
+
+      <div class="card">
+        <details>
+          <summary>部署说明（给目标 frpc 机器）</summary>
+          <pre id="genHelp" class="pre codeblock"></pre>
+        </details>
+      </div>
+    </section>
+
+    <!-- 运维 -->
+    <section id="tab-ops" class="tab-page hidden">
+      <div class="card">
+        <div class="card-head">
+          <h2>frps 状态与控制</h2>
+          <button id="opsRefresh" class="btn ghost small">刷新状态</button>
+        </div>
+        <div id="opsStatus" class="kv-grid"></div>
+        <div class="btn-group ops-buttons">
+          <button id="opsPrune" class="btn">清理离线代理</button>
+          <button id="opsStart" class="btn ghost">启动服务</button>
+          <button id="opsStop" class="btn danger ghost">停止服务</button>
+          <button id="opsRestart" class="btn danger">重启服务</button>
+        </div>
+        <div id="opsResult" class="alert hidden"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>审计日志</h2>
+          <button id="auditRefresh" class="btn ghost small">刷新</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>时间</th><th>账号</th><th>来源 IP</th><th>事件</th><th>详情</th></tr>
+            </thead>
+            <tbody id="auditBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 模态与提示 -->
+<div id="modalRoot" class="modal hidden"></div>
+<div id="toastRoot" class="toasts"></div>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>

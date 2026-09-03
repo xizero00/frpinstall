@@ -6,3 +6,15 @@ frp_*/
 wget-log
 *.log
 *.swp
+
+# 本地真实 frp 配置模板（含 token / 账号密码，不要提交；公开模板见 frp_template.toml.example）
+/frp_template.toml
+/frp_template.toml.bak
+
+# frp-manage 面板运行文件（管理面板登录走 frps webServer 账号，无需提交配置）
+manage/manage.conf
+manage/nginx-*.conf.sample
+manage/.run/
+manage/.state/
+__pycache__/
+*.pyc

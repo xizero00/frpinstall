@@ -9,6 +9,7 @@
 - 单个配置模板：[frp_template.toml](frp_template.toml) 用 `[common]`、`[frps]`、`[frpc]` 三段保存全部 frp 配置；两端重叠的端口、token 只需在 `[common]` 改一次。
 - 安装时脚本读取模板，用 `[common]` 的值替换 `[frpc]` / `[frps]` 中的占位符，再分别生成 `/etc/frp` 下的正式配置。
 - [frp.conf](frp.conf) 只保存与 frp 配置内容无关的安装设置。
+- 附带 [frp-manage](manage/README.md) 网页管理面板：登录 + 防暴力破解 + 对接 frps dashboard v2 API，可在网页上监控客户端/代理/流量并清理离线代理。
 - 旧代码归档：重构前的代码完整保存在 [prev_code](prev_code) 目录，便于对比回退。
 
 ## 目录结构
@@ -18,6 +19,7 @@ frpinstall/
 ├── frpinstall       # 主安装脚本（一般不需要修改）
 ├── frp.conf            # 安装设置：镜像、版本、服务类型、用户名等
 ├── frp_template.toml   # frp 配置模板：[common] + [frps] + [frpc]
+├── manage/             # frps 网页管理面板（frp-manage），详见 manage/README.md
 ├── scripts/
 │   ├── frpc_initd.sh   # initd 客户端服务模板
 │   ├── frps_initd.sh   # initd 服务端服务模板
@@ -184,6 +186,21 @@ sudo systemctl start|stop|restart|status frps_${USER}
 service frpc start|stop|restart|status
 service frps start|stop|restart|status
 ```
+
+## frp-manage 管理面板
+
+`manage/` 是运行在 frps 服务器上的网页管理面板（Python 标准库实现，无需 pip 安装），
+登录使用 frps 配置文件里的 `webServer.user / webServer.password`，不再直接把 frps
+自带的 Dashboard（默认 7500 端口）暴露到公网。
+
+```bash
+cd manage
+cp manage.conf.example manage.conf   # 按需修改监听端口、防爆破参数
+./frpdash-manage.sh start            # 后台启动，访问 http://127.0.0.1:7501
+```
+
+公网访问请用仓库里的 Nginx HTTPS 反代示例，并把面板限制在本机监听。
+详细功能、配置项与端到端自测方法见 [manage/README.md](manage/README.md)。
 
 ## 注意事项
 

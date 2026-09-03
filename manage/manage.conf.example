@@ -1,0 +1,59 @@
+# ============================================================
+# frp-manage 面板配置
+#
+# 使用前请复制为 manage/manage.conf：
+#   cp manage.conf.example manage.conf
+#
+# 登录说明：面板不维护独立账号，
+# 直接用 frps 配置文件里的 webServer.user / webServer.password 登录。
+#
+# 直接运行：
+#   ./frpdash-manage.sh
+# 或安装成服务：
+#   sudo python3 manage/manage.py install-systemd
+# ============================================================
+
+# ---------- 面板监听地址（建议仅本机，前面再挂 Nginx HTTPS） ----------
+PANEL_LISTEN_ADDR=127.0.0.1
+PANEL_LISTEN_PORT=7501
+
+# ---------- frps 配置（自动读取 webServer 地址/端口/账号，无需手填） ----------
+# frps 安装后的配置文件；留空则自动在 /etc/frp/frps_*.toml 中查找
+FRPS_CONFIG_FILE=/etc/frp/frps_root.toml
+
+# 下面三项仅在 frps 配置文件找不到 / 不方便读取时使用：
+# FRPS_API_URL=http://127.0.0.1:7500
+# FRPS_API_USER=admin
+# FRPS_API_PASSWORD=xxxxxxxx
+
+# frps 的 systemd 服务名（留空自动识别；多实例时建议显式指定）
+FRPS_SERVICE_NAME=frps_root
+
+# ---------- 暴力破解防护 ----------
+# 同一用户名+IP 连续失败多少次后锁定
+LOGIN_MAX_FAILURES=5
+# 锁定时间（分钟）
+LOGIN_LOCKOUT_MINUTES=15
+# 统计失败次数的时间窗口（分钟）
+LOGIN_FAILURE_WINDOW_MINUTES=15
+# 每次登录失败后延迟响应的秒数
+LOGIN_DELAY_SECONDS=0.5
+
+# ---------- 会话 ----------
+# 登录会话有效期（小时）
+SESSION_TTL_HOURS=12
+
+# ---------- 状态存储 ----------
+# 会话、审计日志 SQLite 存放目录（无写权限时自动回退到 manage/.state）
+STATE_DIR=/var/lib/frp-manage
+
+# ---------- 服务控制 ----------
+# 是否允许通过面板启停/重启 frps（需要面板以 root 或无密码 sudo 运行）
+ENABLE_SERVICE_CONTROL=true
+
+# ---------- frpc 配置生成器默认值 ----------
+# frp 模板文件（含 [common]/[frpc]/[frps]），留空自动查找 ../frp_template.toml
+FRP_TEMPLATE_FILE=
+# 生成器部署说明中提示的 frp 版本与架构
+FRP_GEN_VERSION=0.71.0
+FRP_GEN_ARCH=linux_amd64
