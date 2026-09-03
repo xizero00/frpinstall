@@ -626,6 +626,55 @@ uninstall_frps_service() {
 
 
 #########################################
+# ========== 服务日常管理 ==========
+#########################################
+
+# 管理 frpc 服务：status / restart / stop / disable
+manage_frpc_service() {
+    local action="$1"
+    if [ "$SERVICETYPE" = "systemd" ]; then
+        log "sudo systemctl ${action} ${FRPC}"
+        sudo systemctl "${action}" "${FRPC}"
+    else
+        case "$action" in
+            status|restart|stop)
+                sudo service "${FRPC}" "${action}"
+                ;;
+            disable)
+                if command -v chkconfig >/dev/null 2>&1; then
+                    sudo chkconfig "${FRPC}" off
+                else
+                    log "initd 下取消开机自启请使用：sudo update-rc.d -f ${FRPC} remove"
+                fi
+                ;;
+        esac
+    fi
+}
+
+# 管理 frps 服务：status / restart / stop / disable
+manage_frps_service() {
+    local action="$1"
+    if [ "$SERVICETYPE" = "systemd" ]; then
+        log "sudo systemctl ${action} ${FRPS}"
+        sudo systemctl "${action}" "${FRPS}"
+    else
+        case "$action" in
+            status|restart|stop)
+                sudo service "${FRPS}" "${action}"
+                ;;
+            disable)
+                if command -v chkconfig >/dev/null 2>&1; then
+                    sudo chkconfig "${FRPS}" off
+                else
+                    log "initd 下取消开机自启请使用：sudo update-rc.d -f ${FRPS} remove"
+                fi
+                ;;
+        esac
+    fi
+}
+
+
+#########################################
 # ========== 主入口 ==========
 #########################################
 
@@ -648,6 +697,16 @@ Usage: ./frpinstall.sh <命令>
   uninstall-frpc-service    卸载 frpc（客户端）服务
   install-frps-service      安装 frps（服务端）服务
   uninstall-frps-service    卸载 frps（服务端）服务
+
+服务日常管理：
+  status-frpc               查看 frpc（客户端）服务状态
+  status-frps               查看 frps（服务端）服务状态
+  restart-frpc              重启 frpc（客户端）服务
+  restart-frps              重启 frps（服务端）服务
+  stop-frpc                 停止 frpc（客户端）服务
+  stop-frps                 停止 frps（服务端）服务
+  disable-frpc              取消 frpc（客户端）服务开机自启
+  disable-frps              取消 frps（服务端）服务开机自启
 
 兼容旧写法：ins_frp / unins_frp / ins_frpc_s / ins_frps_s /
 unins_frpc_s / unins_frps_s 仍可使用。
@@ -699,6 +758,30 @@ main() {
             ;;
         uninstall-frps-service|unins_s_serv)
             uninstall_frps_service
+            ;;
+        status-frpc)
+            manage_frpc_service status
+            ;;
+        status-frps)
+            manage_frps_service status
+            ;;
+        restart-frpc)
+            manage_frpc_service restart
+            ;;
+        restart-frps)
+            manage_frps_service restart
+            ;;
+        stop-frpc)
+            manage_frpc_service stop
+            ;;
+        stop-frps)
+            manage_frps_service stop
+            ;;
+        disable-frpc)
+            manage_frpc_service disable
+            ;;
+        disable-frps)
+            manage_frps_service disable
             ;;
         *)
             usage

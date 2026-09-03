@@ -134,6 +134,16 @@ install-frpc-service      安装 frpc（客户端）服务
 uninstall-frpc-service    卸载 frpc（客户端）服务
 install-frps-service      安装 frps（服务端）服务
 uninstall-frps-service    卸载 frps（服务端）服务
+
+服务日常管理：
+status-frpc               查看 frpc（客户端）服务状态
+status-frps               查看 frps（服务端）服务状态
+restart-frpc              重启 frpc（客户端）服务
+restart-frps              重启 frps（服务端）服务
+stop-frpc                 停止 frpc（客户端）服务
+stop-frps                 停止 frps（服务端）服务
+disable-frpc              取消 frpc（客户端）服务开机自启
+disable-frps              取消 frps（服务端）服务开机自启
 ```
 
 示例：
@@ -143,6 +153,10 @@ uninstall-frps-service    卸载 frps（服务端）服务
 ./frpinstall.sh install-frps        # 安装服务端（二进制 + 配置 + 服务）
 ./frpinstall.sh uninstall-frpc      # 卸载客户端
 ./frpinstall.sh uninstall-frps      # 卸载服务端
+./frpinstall.sh status-frpc         # 查看 frpc 服务状态
+./frpinstall.sh restart-frpc        # 重启 frpc 服务
+./frpinstall.sh stop-frpc           # 停止 frpc 服务
+./frpinstall.sh disable-frpc        # 取消 frpc 开机自启
 ```
 
 > 旧的 `ins_frp` / `ins_frpc_s` / `ins_frps_s` / `unins_*` 写法仍兼容可用。
