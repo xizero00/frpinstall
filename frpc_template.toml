@@ -1,12 +1,15 @@
 # ============================================================
-# frpc（FRP 客户端）完整配置
+# frpc（FRP 客户端）配置模板
 #
-# 安装 frpc 时，脚本会把本文件安装为：
+# 安装 frpc 时，脚本会替换本文件中的 ${...} 占位符，并安装为：
 #   /etc/frp/frpc_${USER_NAME}.toml
 #
-# 这里的内容就是 frp 客户端配置本身，请按实际环境修改：
+# 公共占位符（来自 frp.conf，一般不要直接改这里）：
+#   ${FRP_SERVER_PORT}  -> serverPort
+#   ${FRP_TOKEN}        -> auth.token
+#
+# 其余内容请按实际环境修改，例如：
 #   - serverAddr：改成你的公网服务器 IP / 域名
-#   - auth.token：与服务端 frps.toml 保持一致
 #   - [[proxies]]：需要映射到公网的服务，可写多个
 #
 # 参考文档：
@@ -14,10 +17,10 @@
 # ============================================================
 
 serverAddr = "127.0.0.1"
-serverPort = 7000
+serverPort = ${FRP_SERVER_PORT}
 
 auth.method = "token"
-auth.token = "123456@!(xixihaha)"
+auth.token = "${FRP_TOKEN}"
 
 # 示例：把内网 ssh（127.0.0.1:22）映射到公网 10022 端口
 [[proxies]]

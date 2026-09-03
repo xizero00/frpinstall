@@ -1,0 +1,25 @@
+# ============================================================
+# frps（FRP 服务端）配置模板
+#
+# 安装 frps 时，脚本会替换本文件中的 ${...} 占位符，并安装为：
+#   /etc/frp/frps_${USER_NAME}.toml
+#
+# 公共占位符（来自 frp.conf，一般不要直接改这里）：
+#   ${FRP_SERVER_PORT}  -> bindPort
+#   ${FRP_TOKEN}        -> auth.token
+#
+# 其余内容请按实际环境修改，例如 webServer.* 面板设置。
+#
+# 参考文档：
+#   https://github.com/fatedier/frp/blob/dev/README.md#example-usage
+# ============================================================
+
+bindPort = ${FRP_SERVER_PORT}
+
+auth.method = "token"
+auth.token = "${FRP_TOKEN}"
+
+webServer.addr = "127.0.0.1"
+webServer.port = 7500
+webServer.user = "admin"
+webServer.password = "adminxdaas@d@xxx"

@@ -9,7 +9,8 @@ set -e
 #      所使用的数据接口获取 GitHub 代理列表，自动选择“最近检测通过、
 #      平均速度最快”的代理下载 FRP。
 #   2. 自动查询 fatedier/frp 官方最新 Release 并下载最新版本。
-#   3. frpc.toml / frps.toml 即完整的 frp 配置；frp.conf 只放安装设置。
+#   3. frpc_template.toml / frps_template.toml 即 frp 配置模板；
+#      重叠的端口与 token 放在 frp.conf 中，安装时自动替换。
 #
 #  用法：./frpinstall.sh <ins_frp|ins_frpc_s|ins_frps_s|...>
 #########################################
@@ -34,10 +35,12 @@ source "$CONFIG_FILE"
 : "${AUTO_DETECT_LATEST_VERSION:=true}"
 : "${FRP_VERSION:=0.71.0}"
 : "${FRP_ARCH:=linux_amd64}"
+: "${FRP_SERVER_PORT:=7000}"
+: "${FRP_TOKEN:=123456@!(xixihaha)}"
 : "${USER_NAME:=${USER}}"
 : "${SERVICETYPE:=systemd}"
-: "${FRPC_CONFIG_FILE:=${SCRIPT_DIR}/frpc.toml}"
-: "${FRPS_CONFIG_FILE:=${SCRIPT_DIR}/frps.toml}"
+: "${FRPC_CONFIG_FILE:=${SCRIPT_DIR}/frpc_template.toml}"
+: "${FRPS_CONFIG_FILE:=${SCRIPT_DIR}/frps_template.toml}"
 
 # ---------- FRP 文件名 / 服务名（依赖上面配置） ----------
 FRPCCONF="frpc_${USER_NAME}.toml"
@@ -380,22 +383,33 @@ uninstall_frp() {
 # ========== 配置文件安装 ==========
 #########################################
 
-# 读取 frpc.toml 模板，安装为 /etc/frp/frpc_${USER_NAME}.toml
+# 替换模板中的公共占位符：${FRP_SERVER_PORT}、${FRP_TOKEN}
+expand_frp_template() {
+    local src="$1"
+    local port token
+    # 转义 sed 替换中的特殊字符，保证 token 里的 / & \ 等不被误处理
+    port=$(printf '%s' "$FRP_SERVER_PORT" | sed 's#[\/&]#\\&#g')
+    token=$(printf '%s' "$FRP_TOKEN" | sed 's#[\/&]#\\&#g')
+    sed -e "s/\\\${FRP_SERVER_PORT}/$port/g" \
+        -e "s/\\\${FRP_TOKEN}/$token/g" "$src"
+}
+
+# 读取 frpc_template.toml，替换占位符后安装为 /etc/frp/frpc_${USER_NAME}.toml
 install_frpc_config() {
     log "正在安装 FRP 客户端配置文件 /etc/frp/${FRPCCONF}"
     if [ ! -f "$FRPC_CONFIG_FILE" ]; then
-        die "未找到 frpc 配置模板 ${FRPC_CONFIG_FILE}，请先编辑同目录的 frpc.toml"
+        die "未找到 frpc 配置模板 ${FRPC_CONFIG_FILE}，请先编辑同目录的 frpc_template.toml"
     fi
-    sudo cp "$FRPC_CONFIG_FILE" "/etc/frp/${FRPCCONF}"
+    expand_frp_template "$FRPC_CONFIG_FILE" | sudo tee "/etc/frp/${FRPCCONF}" >/dev/null
 }
 
-# 读取 frps.toml 模板，安装为 /etc/frp/frps_${USER_NAME}.toml
+# 读取 frps_template.toml，替换占位符后安装为 /etc/frp/frps_${USER_NAME}.toml
 install_frps_config() {
     log "正在安装 FRP 服务端配置文件 /etc/frp/${FRPSCONF}"
     if [ ! -f "$FRPS_CONFIG_FILE" ]; then
-        die "未找到 frps 配置模板 ${FRPS_CONFIG_FILE}，请先编辑同目录的 frps.toml"
+        die "未找到 frps 配置模板 ${FRPS_CONFIG_FILE}，请先编辑同目录的 frps_template.toml"
     fi
-    sudo cp "$FRPS_CONFIG_FILE" "/etc/frp/${FRPSCONF}"
+    expand_frp_template "$FRPS_CONFIG_FILE" | sudo tee "/etc/frp/${FRPSCONF}" >/dev/null
 }
 
 
