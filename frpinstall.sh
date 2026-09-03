@@ -1,120 +1,433 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
 set -e
 
-
 #########################################
-#============FRP download =============
-# FRP version
-# please refer to https://github.com/fatedier/frp/releases
-# 你可以根据FRP的github的release来修改该URL，使其下载最新的FRP程序
-FRPURL='https://ghfast.top/https://github.com/fatedier/frp/releases/download/v0.71.0/frp_0.71.0_linux_amd64.tar.gz'
-
-
+#  frpinstall - FRP 服务端 / 客户端安装脚本
+#
+#  特性：
+#   1. 自动从 Mirror 检测站 (https://demo.kentxxq.com/app/mirror)
+#      所使用的数据接口获取 GitHub 代理列表，自动选择“最近检测通过、
+#      平均速度最快”的代理下载 FRP。
+#   2. 自动查询 fatedier/frp 官方最新 Release 并下载最新版本。
+#   3. 所有可配置项都集中在同目录下的 frp.conf 中。
+#
+#  用法：./frpinstall.sh <ins_frp|ins_frpc_s|ins_frps_s|...>
 #########################################
-#==========FRP related configurations =====
-# FRP相关的配置
-# please refer to https://github.com/fatedier/frp/blob/dev/README.md#example-usage
-# 具体语法可以参考 https://github.com/fatedier/frp/blob/dev/README.md#example-usage
 
-# FRP server ip address
-# 公网主机ip地址
-FRP_SERVER_IP='127.0.0.1'
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${FRPINSTALL_CONFIG_FILE:-${SCRIPT_DIR}/frp.conf}"
 
-# FRP server port 
-# 公网主机的FRP反向连接端口，也就是你购买的公网服务器所开放的用于FRP服务的连接端口。
-FRP_SERVER_PORT='7000'
+# ---------- 加载用户配置 ----------
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: 配置文件不存在: ${CONFIG_FILE}" >&2
+    echo "      请将 frp.conf 放到脚本同目录后重新运行。" >&2
+    exit 1
+fi
+# shellcheck source=/dev/null
+source "$CONFIG_FILE"
 
-# FRP server port for your service
-# 公网主机外网端口号，供你的服务使用
-# 比如你想让内网主机的ssh服务在外网访问的端口是10022，那么就可以
-# 设置为如下
-FRP_INET_PORT='10022'
+# ---------- 配置默认值（未在 frp.conf 中定义时使用） ----------
+: "${AUTO_SELECT_MIRROR:=true}"
+: "${MIRROR_API_URL:=https://uni.kentxxq.com/uni.webapi/githubMirror/GetMirrorStatus}"
+: "${MIRROR_API_DAYS:=3}"
+: "${FALLBACK_MIRROR:=}"
+: "${AUTO_DETECT_LATEST_VERSION:=true}"
+: "${FRP_VERSION:=0.71.0}"
+: "${FRP_ARCH:=linux_amd64}"
+: "${FRP_SERVER_IP:=127.0.0.1}"
+: "${FRP_SERVER_PORT:=7000}"
+: "${FRP_INET_PORT:=10022}"
+: "${SERVICE_NAME:=ssh}"
+: "${LOCAL_SERVICE_PORT:=22}"
+: "${FRP_TOKEN:=123456@!(xixihaha)}"
+: "${USER_NAME:=${USER}}"
+: "${FRP_WEB_SERVER_PORT:=7500}"
+: "${FRP_WEB_SERVER_USER:=admin}"
+: "${FRP_WEB_SERVER_PASSWORD:=adminxdaas@d@xxx}"
+: "${SERVICETYPE:=systemd}"
 
-# Your service's name
-# 你想要进行反向代理的服务程序的名字
-# 比如这里想对ssh进行反向代理，那么就填ssh
-# 服务的名字随便起，只要你自己知道这个服务是干嘛的就行
-# 命名不要在单词之间有空格
-SERVICE_NAME='ssh'
-
-# Your service's port
-# 内网的主机上你的服务所占用的端口号
-# 比如你想内内网主机的ssh暴露到公网上，那么就可以设置LOCAL_PORT=22
-# 因为内网主机的ssh服务的端口是22
-LOCAL_SERVICE_PORT='22'
-
-# FRP token
-# 用于公网服务器和内网服务器之间的FRP服务连接进行验证的密码
-FRP_TOKEN='123456@!(xixihaha)'
-
-# User name which can be used to identify the service
-# 自动获取用户的用户名，用于区分服务是谁创建的
-USER_NAME=${USER}
-
-
-#########################################
-#===========FRP configuration file=======
-# FRP配置文件的名字
-
-# frp client configuration filename
-# FRP客户端配置文件的名字
-FRPCCONF=frpc_${USER_NAME}.toml
-# FRP server configuration filename
-# FRP服务器端配置文件的名字
-FRPSCONF=frps_${USER_NAME}.toml
-
-
+# ---------- FRP 文件名 / 服务名（依赖上面配置） ----------
+FRPCCONF="frpc_${USER_NAME}.toml"
+FRPSCONF="frps_${USER_NAME}.toml"
+FRPC="frpc_${USER_NAME}"
+FRPS="frps_${USER_NAME}"
 
 
 #########################################
-#=========service configuration =========
-# 安装到系统的服务相关的配置
-# FRP service type(only support systemd or initd)
-SERVICETYPE=systemd
-# FRP client service name
-# FRP客户端服务的名字
-FRPC=frpc_${USER_NAME}
-# FRP server service name
-# FRP服务端服务的名字
-FRPS=frps_${USER_NAME}
+# ========== 基础工具函数 ==========
+#########################################
+
+log() {
+    printf '[frpinstall] %s\n' "$*" >&2
+}
+
+die() {
+    echo "Error: $*" >&2
+    exit 1
+}
+
+# http_get <url> [超时秒数] ：把响应内容输出到 stdout
+http_get() {
+    local url="$1"
+    local timeout="${2:-40}"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL --connect-timeout 10 --max-time "${timeout}" "$url"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO- --timeout="${timeout}" "$url"
+    else
+        die "未找到 curl 或 wget，无法进行网络请求"
+    fi
+}
+
+# http_download <url> <保存文件名> ：下载文件
+http_download() {
+    local url="$1"
+    local file="$2"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fLk --connect-timeout 10 --retry 2 --retry-delay 2 -o "$file" "$url"
+    elif command -v wget >/dev/null 2>&1; then
+        wget --no-check-certificate --timeout=60 -O "$file" "$url"
+    else
+        die "未找到 curl 或 wget，无法下载文件"
+    fi
+}
 
 
+#########################################
+# ========== GitHub 代理自动选择 ==========
+#########################################
+
+# 通过 Mirror 检测站的数据接口，在所有“最近一次检测成功”的 GitHub 代理中，
+# 选择最近 5 次成功检测平均耗时最小的代理，输出其域名。
+select_fastest_github_mirror() {
+    local api_url="$MIRROR_API_URL"
+    local json=""
+    local host=""
+
+    case "$api_url" in
+        *\?*) api_url="${api_url}&days=${MIRROR_API_DAYS}" ;;
+        *)    api_url="${api_url}?days=${MIRROR_API_DAYS}" ;;
+    esac
+
+    log "正在从 Mirror 检测站获取 GitHub 代理状态: ${api_url}"
+    if ! json=$(http_get "$api_url" 30 2>/dev/null); then
+        log "获取代理列表失败，将改用备用代理"
+        return 1
+    fi
+
+    host=$(printf '%s\n' "$json" | awk '
+{
+    buf = buf $0
+}
+END {
+    pos = 1
+    while (1) {
+        hs = index(substr(buf, pos), "\"hostName\":\"")
+        if (!hs) break
+        hpos = pos + hs + 11
+        he = index(substr(buf, hpos), "\"")
+        if (!he) break
+        host = substr(buf, hpos, he - 1)
+        rest = substr(buf, hpos)
+        cs = index(rest, "\"checkHistory\":[")
+        if (!cs) break
+        cpos = hpos + cs + 16
+        ce = index(substr(buf, cpos), "]")
+        if (!ce) break
+        recs = substr(buf, cpos, ce - 1)
+        pos = cpos + ce - 1
+
+        gsub(/},{/, "}\n{", recs)
+        cnt = split(recs, records, "\n")
+        for (i = 1; i <= cnt; i++) {
+            r = records[i]
+            ok = index(r, "\"isSuccess\":true") > 0
+            sp = index(r, "\"hostSpeed\":")
+            speed = -1
+            if (sp) {
+                s = substr(r, sp + 12)
+                gsub(/[^0-9.]/, "", s)
+                if (s != "") speed = s + 0
+            }
+            if (ok && speed >= 0) {
+                speeds[host, ++speed_cnt[host]] = speed
+            }
+            last_ok[host] = ok
+        }
+    }
+
+    best_host = ""
+    best_avg = 1e18
+    for (h in speed_cnt) {
+        if (!last_ok[h]) continue
+        total = speed_cnt[h]
+        sample = total < 5 ? total : 5
+        sum = 0
+        for (i = total - sample + 1; i <= total; i++) sum += speeds[h, i]
+        avg = sum / sample
+        if (avg < best_avg) {
+            best_avg = avg
+            best_host = h
+        }
+    }
+    print best_host
+}')
+
+    if [ -z "$host" ]; then
+        log "代理列表中暂时没有“最近检测成功”的代理，将改用备用代理"
+        return 1
+    fi
+    printf '%s\n' "$host"
+}
+
+
+#########################################
+# ========== FRP 最新版本自动检测 ==========
+#########################################
+
+# 从 GitHub API 返回内容中解析 tag_name，如 v0.71.0 -> 0.71.0
+parse_version_from_api_json() {
+    grep -oE '"tag_name"[[:space:]]*:[[:space:]]*"v[0-9][0-9.]*"' |
+        head -n 1 |
+        sed -n 's/.*"v\([0-9][0-9.]*\)".*/\1/p'
+}
+
+# 从 GitHub Release 页面 / 重定向内容中解析 v0.71.0
+parse_version_from_release_page() {
+    grep -oE 'releases/tag/v[0-9][0-9.]*' |
+        head -n 1 |
+        sed -n 's/.*v\([0-9][0-9.]*\)$/\1/p'
+}
+
+# 尝试从单个地址获取最新版本号（失败时输出为空）
+try_fetch_latest_version() {
+    local url="$1"
+    local body=""
+    body=$(http_get "$url" 20 2>/dev/null || true)
+    if [ -z "$body" ]; then
+        return 1
+    fi
+    printf '%s\n' "$body" | parse_version_from_api_json
+}
+
+try_fetch_latest_version_from_page() {
+    local url="$1"
+    local body=""
+    body=$(http_get "$url" 30 2>/dev/null || true)
+    if [ -z "$body" ]; then
+        return 1
+    fi
+    printf '%s\n' "$body" | parse_version_from_release_page
+}
+
+# 依次尝试：GitHub API -> 镜像代理的 GitHub API -> 镜像代理的 Release 页面
+resolve_latest_frp_version() {
+    local mirror="$1"
+    local version=""
+
+    version=$(try_fetch_latest_version \
+        "https://api.github.com/repos/fatedier/frp/releases/latest" || true)
+    if [ -n "$version" ]; then
+        printf '%s\n' "$version"
+        return 0
+    fi
+
+    if [ -n "$mirror" ]; then
+        version=$(try_fetch_latest_version \
+            "https://${mirror}/https://api.github.com/repos/fatedier/frp/releases/latest" || true)
+        if [ -n "$version" ]; then
+            printf '%s\n' "$version"
+            return 0
+        fi
+
+        version=$(try_fetch_latest_version_from_page \
+            "https://${mirror}/https://github.com/fatedier/frp/releases/latest" || true)
+        if [ -n "$version" ]; then
+            printf '%s\n' "$version"
+            return 0
+        fi
+    fi
+
+    version=$(try_fetch_latest_version_from_page \
+        "https://github.com/fatedier/frp/releases/latest" || true)
+    if [ -n "$version" ]; then
+        printf '%s\n' "$version"
+        return 0
+    fi
+    return 1
+}
+
+
+#########################################
+# ========== 组装下载地址 ==========
+#########################################
+
+resolve_download_url() {
+    local mirror="$1"
+    local release_url=""
+    release_url="https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_${FRP_ARCH}.tar.gz"
+
+    if [ -n "$mirror" ]; then
+        FRPURL="https://${mirror}/${release_url}"
+    else
+        FRPURL="$release_url"
+    fi
+    FRP_FILENAME="$(basename "$FRPURL")"
+    FRP_DIRNAME="${FRP_FILENAME%.tar.gz}"
+}
+
+# 决定使用哪个镜像、下载哪个版本，并生成最终的下载地址
+prepare_frp_download() {
+    local mirror=""
+    local latest=""
+
+    if [ "$AUTO_SELECT_MIRROR" = "true" ]; then
+        if ! mirror=$(select_fastest_github_mirror); then
+            mirror="$FALLBACK_MIRROR"
+        fi
+    else
+        mirror="$FALLBACK_MIRROR"
+    fi
+
+    if [ -n "$mirror" ]; then
+        log "本次下载将使用 GitHub 代理: ${mirror}"
+    else
+        log "未配置 GitHub 代理，将直连 github.com 下载"
+    fi
+
+    if [ "$AUTO_DETECT_LATEST_VERSION" = "true" ]; then
+        latest=$(resolve_latest_frp_version "$mirror" || true)
+        if [ -n "$latest" ]; then
+            if [ "$latest" != "$FRP_VERSION" ]; then
+                log "检测到官方最新版本 v${latest}（配置中的版本为 v${FRP_VERSION}），自动切换到最新版"
+            fi
+            FRP_VERSION="$latest"
+        else
+            log "自动检测最新版本失败，使用配置中的版本 v${FRP_VERSION}"
+        fi
+    fi
+
+    resolve_download_url "$mirror"
+    log "下载地址: ${FRPURL}"
+}
+
+
+#########################################
+# ========== FRP 下载与安装 ==========
+#########################################
+
+download_frp() {
+    local tarfile="$FRP_FILENAME"
+    local dirname="$FRP_DIRNAME"
+
+    if [ ! -f "$tarfile" ]; then
+        log "正在下载 ${FRPURL}"
+        if ! http_download "$FRPURL" "$tarfile"; then
+            rm -f "$tarfile"
+            die "下载 ${FRPURL} 失败"
+        fi
+
+        # 简单校验：gzip 文件头应该是 1f 8b
+        local magic
+        magic=$(od -An -tx1 -N2 "$tarfile" 2>/dev/null | tr -d ' \n' || true)
+        if [ "$magic" != "1f8b" ]; then
+            rm -f "$tarfile"
+            die "下载内容不是有效的 gzip 压缩包（${magic:-无法读取}），请重试或更换代理"
+        fi
+    else
+        log "已存在 ${tarfile}，跳过下载"
+    fi
+
+    if [ ! -d "$dirname" ]; then
+        log "正在解压 ${tarfile}"
+        tar -xzf "$tarfile"
+    else
+        log "已存在目录 ${dirname}，跳过解压"
+    fi
+}
+
+install_frp() {
+    download_frp
+
+    if [ ! -f /usr/local/bin/frpc ]; then
+        log "正在复制 ${FRP_DIRNAME}/frpc 到 /usr/local/bin/frpc"
+        sudo cp "${FRP_DIRNAME}/frpc" /usr/local/bin/frpc
+    fi
+
+    if [ ! -f /usr/local/bin/frps ]; then
+        log "正在复制 ${FRP_DIRNAME}/frps 到 /usr/local/bin/frps"
+        sudo cp "${FRP_DIRNAME}/frps" /usr/local/bin/frps
+    fi
+
+    if [ ! -d /etc/frp ]; then
+        log "正在创建 FRP 配置目录 /etc/frp"
+        sudo mkdir -p /etc/frp
+    fi
+    install_frpc_config
+    install_frps_config
+}
+
+uninstall_frp() {
+    if [ -f /usr/local/bin/frpc ]; then
+        log "正在删除 /usr/local/bin/frpc"
+        sudo rm -f /usr/local/bin/frpc
+    fi
+    if [ -f /usr/local/bin/frps ]; then
+        log "正在删除 /usr/local/bin/frps"
+        sudo rm -f /usr/local/bin/frps
+    fi
+    if [ -d /etc/frp ]; then
+        log "正在删除 FRP 配置目录 /etc/frp"
+        sudo rm -rf /etc/frp
+    fi
+}
+
+
+#########################################
+# ========== 配置文件安装 ==========
+#########################################
 
 install_frpc_config() {
-    echo 'install frp client configuration file'
-    echo "
-serverAddr = \"${FRP_SERVER_IP}\"
+    log "正在安装 FRP 客户端配置文件 /etc/frp/${FRPCCONF}"
+    sudo tee "/etc/frp/${FRPCCONF}" >/dev/null <<EOF
+serverAddr = "${FRP_SERVER_IP}"
 serverPort = ${FRP_SERVER_PORT}
 
-auth.method = \"token\"
-auth.token = \"${FRP_TOKEN}\"
+auth.method = "token"
+auth.token = "${FRP_TOKEN}"
 
 [[proxies]]
-name = \"${SERVICE_NAME}\"
-type = \"tcp\"
-localIP = \"127.0.0.1\"
+name = "${SERVICE_NAME}"
+type = "tcp"
+localIP = "127.0.0.1"
 localPort = ${LOCAL_SERVICE_PORT}
 remotePort = ${FRP_INET_PORT}
-" | sudo tee /etc/frp/${FRPCCONF}
+EOF
 }
 
 install_frps_config() {
-    echo 'Installing frp server configuration file'
-    echo "
+    log "正在安装 FRP 服务端配置文件 /etc/frp/${FRPSCONF}"
+    sudo tee "/etc/frp/${FRPSCONF}" >/dev/null <<EOF
 bindPort = ${FRP_SERVER_PORT}
 
-auth.method = \"token\"
-auth.token = \"${FRP_TOKEN}\"
+auth.method = "token"
+auth.token = "${FRP_TOKEN}"
 
-webServer.addr = \"127.0.0.1\"
-webServer.port = 7500
-webServer.user = \"admin\"
-webServer.password = \"adminxdaas@d@xxx\"
-" | sudo tee /etc/frp/${FRPSCONF}
+webServer.addr = "127.0.0.1"
+webServer.port = ${FRP_WEB_SERVER_PORT}
+webServer.user = "${FRP_WEB_SERVER_USER}"
+webServer.password = "${FRP_WEB_SERVER_PASSWORD}"
+EOF
 }
 
+
+#########################################
+# ========== systemd 服务安装/卸载 ==========
+#########################################
+
 install_frps_systemd_service() {
-     echo "
+    log "正在安装 FRP 服务端 systemd 服务 ${FRPS}"
+    sudo tee "/etc/systemd/system/${FRPS}.service" >/dev/null <<EOF
 [Unit]
 Description=FRP Server Daemon
 After=network.target
@@ -128,20 +441,21 @@ RestartSec=30
 
 [Install]
 WantedBy=multi-user.target
-" | sudo tee /etc/systemd/system/${FRPS}.service
-    sudo systemctl enable ${FRPS}
-    sudo systemctl start ${FRPS}
-    sudo systemctl status ${FRPS}
+EOF
+    sudo systemctl enable "${FRPS}"
+    sudo systemctl start "${FRPS}"
+    sudo systemctl status "${FRPS}"
 }
 
 uninstall_frps_systemd_service() {
-    sudo systemctl stop ${FRPS}
-    sudo systemctl disable ${FRPS}
-    sudo rm -rf /etc/systemd/system/${FRPS}.service
+    sudo systemctl stop "${FRPS}"
+    sudo systemctl disable "${FRPS}"
+    sudo rm -f "/etc/systemd/system/${FRPS}.service"
 }
 
 install_frpc_systemd_service() {
-     echo "
+    log "正在安装 FRP 客户端 systemd 服务 ${FRPC}"
+    sudo tee "/etc/systemd/system/${FRPC}.service" >/dev/null <<EOF
 [Unit]
 Description=FRP Client Daemon
 After=network.target
@@ -155,200 +469,169 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-" | sudo tee /etc/systemd/system/${FRPC}.service
-    sudo systemctl enable ${FRPC}
-    sudo systemctl start ${FRPC}
-    sudo systemctl status ${FRPC}
+EOF
+    sudo systemctl enable "${FRPC}"
+    sudo systemctl start "${FRPC}"
+    sudo systemctl status "${FRPC}"
 }
 
 uninstall_frpc_systemd_service() {
-    sudo systemctl stop ${FRPC}
-    sudo systemctl disable ${FRPC}
-    sudo rm -rf /etc/systemd/system/${FRPC}.service
+    sudo systemctl stop "${FRPC}"
+    sudo systemctl disable "${FRPC}"
+    sudo rm -f "/etc/systemd/system/${FRPC}.service"
 }
 
 
+#########################################
+# ========== initd 服务安装/卸载 ==========
+#########################################
 
 install_frps_initd_service() {
-    sudo cp ./frps_initd.sh /etc/init.d/${FRPS}
-    # rpm based, install service to be run at boot-time: 
-    chkconfig ${FRPS} --add
-    # apt based, install service to be run at boot-time: 
+    log "正在安装 FRP 服务端 initd 服务 ${FRPS}"
+    sudo cp "${SCRIPT_DIR}/scripts/frps_initd.sh" "/etc/init.d/${FRPS}"
+    # rpm based, install service to be run at boot-time:
+    chkconfig "${FRPS}" --add
+    # apt based, install service to be run at boot-time:
     # update-rc.d ${FRPS} defaults
-    service ${FRPS} start
-    service ${FRPS} status
+    service "${FRPS}" start
+    service "${FRPS}" status
 }
 
 uninstall_frps_initd_service() {
-    chkconfig ${FRPS} --del
-    service ${FRPS} stop
-    sudo rm -rf /etc/init.d/${FRPS}
+    chkconfig "${FRPS}" --del
+    service "${FRPS}" stop
+    sudo rm -f "/etc/init.d/${FRPS}"
 }
 
 install_frpc_initd_service() {
-    sudo cp ./frpc_initd.sh /etc/init.d/${FRPC}
-    # rpm based, install service to be run at boot-time: 
-    chkconfig ${FRPC} --add
-    # apt based, install service to be run at boot-time: 
-    # update-rc.d ${FRPS} defaults
-    service ${FRPC} start
-    service ${FRPC} status
+    log "正在安装 FRP 客户端 initd 服务 ${FRPC}"
+    sudo cp "${SCRIPT_DIR}/scripts/frpc_initd.sh" "/etc/init.d/${FRPC}"
+    # rpm based, install service to be run at boot-time:
+    chkconfig "${FRPC}" --add
+    # apt based, install service to be run at boot-time:
+    # update-rc.d ${FRPC} defaults
+    service "${FRPC}" start
+    service "${FRPC}" status
 }
 
 uninstall_frpc_initd_service() {
-    chkconfig ${FRPC} --del
-    service ${FRPC} stop
-    sudo rm -rf /etc/init.d/${FRPC}
+    chkconfig "${FRPC}" --del
+    service "${FRPC}" stop
+    sudo rm -f "/etc/init.d/${FRPC}"
 }
 
-TARFILENAME=$(basename -- "$FRPURL")
-TARDIR="${TARFILENAME%.tar.gz}"
-download_frp_64() {
-    if [ ! -f $TARFILENAME ]; then
-        echo "Downloading ${FRPURL}"
-        #proxychains wget ${FRPURL}
-        
-        wget --no-check-certificate  ${FRPURL}
-        echo "Extracting ${TARFILENAME}"
-        tar -xzvf $TARFILENAME
-    else
-        echo "Already exists ${TARFILENAME}"
-        if [ ! -d $TARDIR ]; then
-            echo "Extracting ${TARFILENAME} to ${TARDIR}"
-            tar -xzvf $TARFILENAME
-        else
-            echo "Already exists ${TARDIR}"
-        fi
-    fi
-}
 
-install_frp() {
-    download_frp_64
-
-    if [ ! -f /usr/local/bin/frpc ]; then
-        echo "Copying ${TARDIR}/frpc to /usr/local/bin/frpc"
-        sudo cp ${TARDIR}/frpc /usr/local/bin/frpc
-    fi
-
-    if [ ! -f /usr/local/bin/frps ]; then
-        echo "Copying ${TARDIR}/frps to /usr/local/bin/frps"
-        sudo cp ${TARDIR}/frps /usr/local/bin/frps
-    fi
-
-    if [ ! -d /etc/frp ]; then
-        echo "Creating frp configuration directory"
-        sudo mkdir /etc/frp
-    fi
-    install_frpc_config
-    install_frps_config
-}
-
-uninstall_frp() {
-    if [ -f /usr/local/bin/frpc ]; then
-        echo 'Deleting frpc to /usr/local/bin/frpc'
-        sudo rm -rf /usr/local/bin/frpc
-    fi
-    if [ -f /usr/local/bin/frps ]; then
-        echo 'Deleting frps to /usr/local/bin/frps'
-        sudo rm -rf /usr/local/bin/frps
-    fi
-    if [ ! -d /etc/frp ]; then
-        echo 'Deleting frp configuration directory'
-        sudo rm -rf /etc/frp
-    fi
-
-}
+#########################################
+# ========== 服务安装/卸载分发 ==========
+#########################################
 
 install_frpc_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'Installing frp client service for systemd'
+        log "正在安装 FRP 客户端 systemd 服务"
         install_frpc_systemd_service
     else
-        echo 'Installing frp client service for initd'
+        log "正在安装 FRP 客户端 initd 服务"
         install_frpc_initd_service
     fi
 }
 
 uninstall_frpc_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'Uninstalling frp client service for systemd'
+        log "正在卸载 FRP 客户端 systemd 服务"
         uninstall_frpc_systemd_service
     else
-        echo 'Uninstalling frp client service for initd'
+        log "正在卸载 FRP 客户端 initd 服务"
         uninstall_frpc_initd_service
     fi
 }
 
 install_frps_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'Installing frp server service for systemd'
+        log "正在安装 FRP 服务端 systemd 服务"
         install_frps_systemd_service
     else
-        echo 'Installing frp server service for initd'
+        log "正在安装 FRP 服务端 initd 服务"
         install_frps_initd_service
     fi
 }
 
 uninstall_frps_service() {
     if [ "$SERVICETYPE" = "systemd" ]; then
-        echo 'Uninstalling frp server service for systemd'
+        log "正在卸载 FRP 服务端 systemd 服务"
         uninstall_frps_systemd_service
     else
-        echo 'Uninstalling frp server service for initd'
+        log "正在卸载 FRP 服务端 initd 服务"
         uninstall_frps_initd_service
     fi
 }
 
 
-############## main ############################
+#########################################
+# ========== 主入口 ==========
+#########################################
 
+usage() {
+    cat <<'EOF'
+Usage: ./frpinstall.sh {ins_frp|ins_frpc_s|ins_frps_s|unins_frpc_s|unins_frps_s}
 
-case "$1" in
-    ins_frpc_s)
-        install_frp
-        install_frpc_service
-            ;;
-    unins_frpc_s)
-        uninstall_frp
-        uninstall_frpc_service
-        ;;
-    ins_frps_s)
-        install_frp
-        install_frps_service
-            ;;   
-    unins_frps_s)
-        uninstall_frp
-        uninstall_frps_service
-            ;; 
-    ins_frp)
-        install_frp
-            ;;
-    unins_frp)
-        uninstall_frp
-            ;;
-    ins_c_serv)
-        install_frpc_service
-            ;;
-    ins_s_serv)
-        install_frps_service
-            ;;
-    unins_c_serv)
-        uninstall_frpc_service
-            ;;
-    unins_s_serv)
-        uninstall_frps_service
-            ;;
-    *)
-    echo "Usage: $0 {ins_frp|ins_frpc_s|ins_frps_s|unins_frpc_s|unins_frps_s}"
-    echo "      support installing frp service for systemd(tested) and initd(not tested)"
-    echo "      ins_frp : install frp binary and configuration files"
-    echo "      ins_frpc_s : install frp binary and configuration files and client service"
-    echo "      ins_frps_s : install frp binary and configuration files and server service"
-    echo "      unins_frpc_s : delete frp binary and configuration files and client service"
-    echo "      unins_frps_s : delete frp binary and configuration files and server service"
-esac
+支持安装 systemd（已测试）与 initd（未测试）服务。
 
+  ins_frp       安装 FRP 二进制文件与配置文件（不安装服务）
+  ins_frpc_s    安装 FRP 二进制、配置文件与客户端服务
+  ins_frps_s    安装 FRP 二进制、配置文件与服务端服务
+  unins_frpc_s  删除 FRP 二进制、配置文件与客户端服务
+  unins_frps_s  删除 FRP 二进制、配置文件与服务端服务
 
+所有可配置项都在同目录的 frp.conf 中，请先按需修改。
+EOF
+}
 
+main() {
+    case "$1" in
+        ins_frpc_s)
+            prepare_frp_download
+            install_frp
+            install_frpc_service
+            ;;
+        unins_frpc_s)
+            uninstall_frp
+            uninstall_frpc_service
+            ;;
+        ins_frps_s)
+            prepare_frp_download
+            install_frp
+            install_frps_service
+            ;;
+        unins_frps_s)
+            uninstall_frp
+            uninstall_frps_service
+            ;;
+        ins_frp)
+            prepare_frp_download
+            install_frp
+            ;;
+        unins_frp)
+            uninstall_frp
+            ;;
+        ins_c_serv)
+            install_frpc_service
+            ;;
+        ins_s_serv)
+            install_frps_service
+            ;;
+        unins_c_serv)
+            uninstall_frpc_service
+            ;;
+        unins_s_serv)
+            uninstall_frps_service
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+}
 
-
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
