@@ -31,7 +31,7 @@ bindPort = ${serverPort}
 auth.method = "token"
 auth.token = "${token}"
 
-webServer.addr = "127.0.0.1"
+webServer.addr = "0.0.0.0"
 webServer.port = 7500
 webServer.user = "admin"
 webServer.password = "adminxdaas@d@xxx"
