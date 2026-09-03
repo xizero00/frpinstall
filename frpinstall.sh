@@ -309,10 +309,36 @@ prepare_frp_download() {
 # ========== FRP 下载与安装 ==========
 #########################################
 
+# 检查文件是否为有效的 gzip 压缩包
+is_valid_gzip() {
+    local file="$1"
+    local magic
+    magic=$(od -An -tx1 -N2 "$file" 2>/dev/null | tr -d ' \n' || true)
+    [ "$magic" = "1f8b" ]
+}
+
+# 下载 FRP：优先使用本地已有的压缩包/解压目录，没有再联网下载
 download_frp() {
     local tarfile="$FRP_FILENAME"
     local dirname="$FRP_DIRNAME"
 
+    # 1) 本地已有解压好的目录：直接使用，无需下载
+    if [ -d "$dirname" ]; then
+        log "本地已存在解压目录 ${dirname}，直接使用"
+        return 0
+    fi
+
+    # 2) 本地已有压缩包：校验后直接使用
+    if [ -f "$tarfile" ]; then
+        if is_valid_gzip "$tarfile"; then
+            log "本地已存在 ${tarfile}，跳过下载"
+        else
+            log "本地 ${tarfile} 不是有效的 gzip 文件，删除后重新下载"
+            rm -f "$tarfile"
+        fi
+    fi
+
+    # 3) 本地没有可用压缩包：联网下载
     if [ ! -f "$tarfile" ]; then
         log "正在下载 ${FRPURL}"
         if ! http_download "$FRPURL" "$tarfile"; then
@@ -320,22 +346,15 @@ download_frp() {
             die "下载 ${FRPURL} 失败"
         fi
 
-        # 简单校验：gzip 文件头应该是 1f 8b
-        local magic
-        magic=$(od -An -tx1 -N2 "$tarfile" 2>/dev/null | tr -d ' \n' || true)
-        if [ "$magic" != "1f8b" ]; then
+        if ! is_valid_gzip "$tarfile"; then
             rm -f "$tarfile"
-            die "下载内容不是有效的 gzip 压缩包（${magic:-无法读取}），请重试或更换代理"
+            die "下载内容不是有效的 gzip 压缩包，请重试或更换代理"
         fi
-    else
-        log "已存在 ${tarfile}，跳过下载"
     fi
 
     if [ ! -d "$dirname" ]; then
         log "正在解压 ${tarfile}"
         tar -xzf "$tarfile"
-    else
-        log "已存在目录 ${dirname}，跳过解压"
     fi
 }
 
