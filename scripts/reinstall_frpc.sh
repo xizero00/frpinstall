@@ -2,5 +2,5 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-bash "${SCRIPT_DIR}/../frpinstall.sh" uninstall-frpc
-bash "${SCRIPT_DIR}/../frpinstall.sh" install-frpc
+bash "${SCRIPT_DIR}/../frpinstall" uninstall-frpc
+bash "${SCRIPT_DIR}/../frpinstall" install-frpc

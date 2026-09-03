@@ -12,7 +12,7 @@ set -e
 #   3. frp_template.toml 一个文件包含 [common] / [frpc] / [frps] 三段；
 #      重叠的端口与 token 在 [common] 段配置，安装时自动替换并提取。
 #
-#  用法：./frpinstall.sh <ins_frp|ins_frpc_s|ins_frps_s|...>
+#  用法：./frpinstall <install-frp|install-frpc|install-frps|...>
 #########################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -680,7 +680,7 @@ manage_frps_service() {
 
 usage() {
     cat <<'EOF'
-Usage: ./frpinstall.sh <命令>
+Usage: ./frpinstall <命令>
 
 常用命令：
   install-frp               安装 FRP 二进制、配置文件，并安装 frpc + frps 服务
@@ -710,6 +710,9 @@ Usage: ./frpinstall.sh <命令>
 
 兼容旧写法：ins_frp / unins_frp / ins_frpc_s / ins_frps_s /
 unins_frpc_s / unins_frps_s 仍可使用。
+
+直接以普通用户运行 ./frpinstall，遇到需要 root 权限的操作时
+脚本会通过 sudo 提示输入密码；不要用 sudo 运行整个脚本。
 
 支持 systemd（已测试）与 initd（未测试）。安装前请先编辑
 frp.conf 与 frp_template.toml。

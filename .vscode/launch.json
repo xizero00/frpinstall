@@ -8,7 +8,7 @@
             "type": "bashdb",
             "request": "launch",
             "name": "debug",
-            "program": "frpinstall.sh",
+            "program": "frpinstall",
             "args": ["install-frps"],
             "terminalKind": "integrated"
         }

@@ -15,7 +15,7 @@
 
 ```text
 frpinstall/
-├── frpinstall.sh       # 主安装脚本（一般不需要修改）
+├── frpinstall       # 主安装脚本（一般不需要修改）
 ├── frp.conf            # 安装设置：镜像、版本、服务类型、用户名等
 ├── frp_template.toml   # frp 配置模板：[common] + [frps] + [frpc]
 ├── scripts/
@@ -44,16 +44,17 @@ vim frp_template.toml  # [common] 公共参数 + [frps] / [frpc] 配置
 安装 FRP 服务端（含 frps 服务）：
 
 ```bash
-./frpinstall.sh install-frps
+./frpinstall install-frps
 ```
 
 安装 FRP 客户端（含 frpc 服务）：
 
 ```bash
-./frpinstall.sh install-frpc
+./frpinstall install-frpc
 ```
 
-> 脚本内部会调用 `sudo`，请使用有 sudo 权限的账号运行。
+> 直接以普通用户运行 `./frpinstall` 即可，不需要在前面加 `sudo`；
+> 安装到系统目录等需要 root 权限的步骤，脚本内部会用 `sudo` 临时提示输入密码。
 
 ## 配置说明
 
@@ -149,14 +150,14 @@ disable-frps              取消 frps（服务端）服务开机自启
 示例：
 
 ```bash
-./frpinstall.sh install-frpc        # 安装客户端（二进制 + 配置 + 服务）
-./frpinstall.sh install-frps        # 安装服务端（二进制 + 配置 + 服务）
-./frpinstall.sh uninstall-frpc      # 卸载客户端
-./frpinstall.sh uninstall-frps      # 卸载服务端
-./frpinstall.sh status-frpc         # 查看 frpc 服务状态
-./frpinstall.sh restart-frpc        # 重启 frpc 服务
-./frpinstall.sh stop-frpc           # 停止 frpc 服务
-./frpinstall.sh disable-frpc        # 取消 frpc 开机自启
+./frpinstall install-frpc        # 安装客户端（二进制 + 配置 + 服务）
+./frpinstall install-frps        # 安装服务端（二进制 + 配置 + 服务）
+./frpinstall uninstall-frpc      # 卸载客户端
+./frpinstall uninstall-frps      # 卸载服务端
+./frpinstall status-frpc         # 查看 frpc 服务状态
+./frpinstall restart-frpc        # 重启 frpc 服务
+./frpinstall stop-frpc           # 停止 frpc 服务
+./frpinstall disable-frpc        # 取消 frpc 开机自启
 ```
 
 > 旧的 `ins_frp` / `ins_frpc_s` / `ins_frps_s` / `unins_*` 写法仍兼容可用。
